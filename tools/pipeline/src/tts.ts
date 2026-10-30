@@ -93,6 +93,20 @@ export async function ttsSection(section: string): Promise<void> {
       items.push({ key: `sent:${s.text}`, text: s.text });
   }
 
+  // comprehension questions + options (LLM stage output, plan §6.5)
+  const compPath = join(dir, "enriched.comprehension.json");
+  if (await exists(compPath)) {
+    const comps = JSON.parse(await readFile(compPath, "utf8")) as {
+      payload?: { question?: string; options?: string[] };
+    }[];
+    for (const c of comps) {
+      const q = c.payload?.question;
+      if (q) items.push({ key: `cq:${q}`, text: q });
+      for (const o of c.payload?.options ?? [])
+        items.push({ key: `cqo:${o}`, text: o });
+    }
+  }
+
   const manifest: Record<string, { normal: string; slow?: string }> = {};
   let made = 0;
   let cached = 0;

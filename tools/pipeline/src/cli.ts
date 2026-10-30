@@ -5,6 +5,7 @@ import { REPO_ROOT, photosDir } from "./paths.js";
 import { extractSection } from "./extract.js";
 import { pdfToImages } from "./pdf.js";
 import { enrichSection } from "./enrich.js";
+import { comprehendSection } from "./comprehend.js";
 import { ttsSection } from "./tts.js";
 import { buildPack } from "./pack.js";
 
@@ -47,6 +48,13 @@ program
   .argument("<section>")
   .action(async (section: string) => {
     await enrichSection(section);
+  });
+
+program
+  .command("comprehend")
+  .argument("<section>")
+  .action(async (section: string) => {
+    await comprehendSection(section);
   });
 
 program

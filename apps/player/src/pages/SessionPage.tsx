@@ -1,16 +1,48 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useApp } from "../store";
-import { buildSession, type SessionStep } from "../session/builder";
+import {
+  buildSession,
+  buildBossSession,
+  type SessionStep,
+} from "../session/builder";
 import { getReviews, recordAttempt, finishSession, streak } from "../progress";
+import { stopAll } from "../audio";
 import Flashcard from "../components/Flashcard";
 import ListenPick from "../components/ListenPick";
 import Cloze from "../components/Cloze";
 import SentenceBuilder from "../components/SentenceBuilder";
+import SpellingTiles from "../components/SpellingTiles";
+import MatchPairs from "../components/MatchPairs";
+import TrueFalse from "../components/TrueFalse";
+import OddOneOut from "../components/OddOneOut";
+import MinimalPair from "../components/MinimalPair";
+import Comprehension from "../components/Comprehension";
 import EndScreen from "../components/EndScreen";
-import type { ExerciseType } from "@pagebuddy/schema";
+import { db } from "../db";
+import type { ExerciseItem, ExerciseType, LessonPack } from "@pagebuddy/schema";
 
-export default function SessionPage() {
+type ExProps = {
+  packId: string;
+  pack: LessonPack;
+  exercise: ExerciseItem;
+  onDone: (correct: boolean, secondChance: boolean) => void;
+};
+
+const EXERCISE_COMPONENTS: Partial<Record<ExerciseType, ComponentType<ExProps>>> = {
+  listenPick: ListenPick,
+  cloze: Cloze,
+  sentenceBuilder: SentenceBuilder,
+  spellingTiles: SpellingTiles,
+  dictation: SpellingTiles,
+  matchPairs: MatchPairs,
+  trueFalse: TrueFalse,
+  oddOneOut: OddOneOut,
+  minimalPair: MinimalPair,
+  comprehension: Comprehension,
+};
+
+export default function SessionPage({ boss = false }: { boss?: boolean }) {
   const { pack, loadPack } = useApp();
   const [steps, setSteps] = useState<SessionStep[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -25,7 +57,9 @@ export default function SessionPage() {
     (async () => {
       const p = await loadPack();
       const reviews = await getReviews(p.packId);
-      setSteps(buildSession(p, reviews));
+      setSteps(
+        boss ? buildBossSession(p, reviews) : buildSession(p, reviews),
+      );
     })();
   }, []);
 
@@ -42,6 +76,7 @@ export default function SessionPage() {
   const step = steps[index];
 
   const advance = () => {
+    stopAll(); // never carry a clip into the next question
     stepStart.current = Date.now();
     if (index + 1 >= steps.length) {
       finish();
@@ -68,6 +103,13 @@ export default function SessionPage() {
       ),
     });
     setFinalStreak(await streak());
+    if (boss) {
+      const row = await db.settings.get("bossClears");
+      await db.settings.put({
+        key: "bossClears",
+        value: (Number(row?.value) || 0) + 1,
+      });
+    }
     setDone(true);
   };
 
@@ -107,13 +149,29 @@ export default function SessionPage() {
     );
   }
 
+  const ExerciseView =
+    step.kind === "exercise"
+      ? EXERCISE_COMPONENTS[step.exercise.type]
+      : undefined;
+
   return (
     <div className="page no-select">
-      <div className="progress-bar">
-        <div
-          className="progress-fill"
-          style={{ width: `${(index / steps.length) * 100}%` }}
-        />
+      {boss && (
+        <p className="boss-banner">
+          🏰 BOSS ROUND — beat your trickiest words!
+        </p>
+      )}
+      <div className="session-top">
+        <div className="progress-bar">
+          <motion.div
+            className="progress-fill"
+            animate={{ width: `${(index / steps.length) * 100}%` }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+          >
+            <img src="art/mascot.png" alt="" className="progress-rider" />
+          </motion.div>
+        </div>
+        <a href="#/" className="quit-pill" aria-label="quit session" onClick={stopAll}>✕</a>
       </div>
       <AnimatePresence mode="wait">
         <motion.div
@@ -135,35 +193,16 @@ export default function SessionPage() {
           }}
         />
       )}
-      {step.kind === "exercise" && step.exercise.type === "listenPick" && (
-        <ListenPick
+      {step.kind === "exercise" && ExerciseView && (
+        <ExerciseView
           key={`e-${index}-${step.exercise.id}`}
           packId={pack.packId}
           pack={pack}
           exercise={step.exercise}
-          onDone={(c, sc) => handleExercise(index, step.itemId, "listenPick", c, sc)}
+          onDone={(c, sc) => handleExercise(index, step.itemId, step.exercise.type, c, sc)}
         />
       )}
-      {step.kind === "exercise" && step.exercise.type === "cloze" && (
-        <Cloze
-          key={`e-${index}-${step.exercise.id}`}
-          packId={pack.packId}
-          pack={pack}
-          exercise={step.exercise}
-          onDone={(c, sc) => handleExercise(index, step.itemId, "cloze", c, sc)}
-        />
-      )}
-      {step.kind === "exercise" && step.exercise.type === "sentenceBuilder" && (
-        <SentenceBuilder
-          key={`e-${index}-${step.exercise.id}`}
-          packId={pack.packId}
-          pack={pack}
-          exercise={step.exercise}
-          onDone={(c, sc) => handleExercise(index, step.itemId, "sentenceBuilder", c, sc)}
-        />
-      )}
-      {step.kind === "exercise" &&
-        !["listenPick", "cloze", "sentenceBuilder"].includes(step.exercise.type) && (
+      {step.kind === "exercise" && !ExerciseView && (
           <div className="card">
             <p className="exercise-label">{step.exercise.type}</p>
             <p>This exercise type isn't playable yet — tap to skip.</p>
@@ -173,7 +212,7 @@ export default function SessionPage() {
         </motion.div>
       </AnimatePresence>
       <p style={{ textAlign: "center", opacity: 0.6, fontSize: "0.85rem" }}>
-        {index + 1} / {steps.length} · <a href="#/">quit</a>
+        {index + 1} / {steps.length}
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 // Copies built lesson packs (content/packs/*) into public/packs/ so vite can
 // serve them, and writes packs/index.json. Run after `pipeline pack`.
-import { cpSync, mkdirSync, readdirSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,6 +19,7 @@ for (const entry of readdirSync(src, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const packJson = join(src, entry.name, "pack.json");
   if (!existsSync(packJson)) continue;
+  rmSync(join(dst, entry.name), { recursive: true, force: true });
   cpSync(join(src, entry.name), join(dst, entry.name), { recursive: true });
   packs.push(entry.name);
 }

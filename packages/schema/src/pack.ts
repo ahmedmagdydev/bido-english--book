@@ -58,6 +58,7 @@ export const ExerciseTypeSchema = z.enum([
   "trueFalse",
   "minimalPair",
   "dictation",
+  "comprehension",
 ]);
 export type ExerciseType = z.infer<typeof ExerciseTypeSchema>;
 

@@ -5,17 +5,21 @@ const cache = new Map<string, LessonPack>();
 let activePackId: string | null = null;
 
 export async function listPacks(): Promise<string[]> {
-  const res = await fetch("packs/index.json");
-  if (!res.ok) return [];
-  const idx = (await res.json()) as { packs: string[] };
-  return idx.packs;
+  try {
+    const res = await fetch("packs/index.json");
+    // capacitor:// may report status 0 for valid files — parse instead of
+    // trusting .ok; zod validation downstream catches real badness
+    const idx = (await res.json()) as { packs: string[] };
+    return idx.packs;
+  } catch {
+    return [];
+  }
 }
 
 export async function loadPack(packId: string): Promise<LessonPack> {
   const hit = cache.get(packId);
   if (hit) return hit;
   const res = await fetch(`packs/${packId}/pack.json`);
-  if (!res.ok) throw new Error(`pack ${packId} not found (${res.status})`);
   const pack = LessonPackSchema.parse(await res.json());
   cache.set(packId, pack);
   await db.packs.put({ packId, version: pack.version, importedAt: Date.now() });

@@ -128,13 +128,41 @@ export async function buildPack(opts: PackOptions): Promise<void> {
       }
     }
 
-    // approved generated exercises only
-    const enriched = join(dir, "enriched.exercises.json");
-    if (await exists(enriched)) {
-      const all = JSON.parse(await readFile(enriched, "utf8")) as unknown[];
+    // approved generated exercises only — enriched.*.json covers the
+    // deterministic pass (exercises) and the LLM pass (comprehension)
+    const enrichedFiles = (await readdir(dir)).filter(
+      (f) => f.startsWith("enriched.") && f.endsWith(".json"),
+    );
+    for (const ef of enrichedFiles.sort()) {
+      const all = JSON.parse(await readFile(join(dir, ef), "utf8")) as unknown[];
       for (const e of all) {
         const ex = ExerciseItemSchema.parse(e);
-        if (ex.approved) exercises.push(ex);
+        if (!ex.approved) continue;
+        // wire audio into comprehension payloads: passage lines reuse the
+        // sent:* clips; question/options use cq:*/cqo:* clips when piper
+        // generated them (player falls back to speechSynthesis otherwise)
+        if (ex.type === "comprehension") {
+          const p = ex.payload as {
+            passageSentences?: string[];
+            question?: string;
+            options?: string[];
+            audio?: Record<string, unknown>;
+          };
+          const audio: Record<string, unknown> = {};
+          const passage = (p.passageSentences ?? [])
+            .map((t) => manifest[`sent:${t}`])
+            .filter(Boolean);
+          if (passage.length) audio.passage = passage;
+          if (p.question && manifest[`cq:${p.question}`])
+            audio.question = manifest[`cq:${p.question}`];
+          const optAudio: Record<string, unknown> = {};
+          for (const o of p.options ?? []) {
+            if (manifest[`cqo:${o}`]) optAudio[o] = manifest[`cqo:${o}`];
+          }
+          if (Object.keys(optAudio).length) audio.options = optAudio;
+          if (Object.keys(audio).length) p.audio = audio;
+        }
+        exercises.push(ex);
       }
     }
 
@@ -142,7 +170,7 @@ export async function buildPack(opts: PackOptions): Promise<void> {
     const sectionAudio = join(dir, "audio");
     if (await exists(sectionAudio)) {
       for (const f of await readdir(sectionAudio)) {
-        if (extname(f) === ".wav" || extname(f) === ".mp3") {
+        if ([".wav", ".mp3", ".m4a"].includes(extname(f))) {
           await copyFile(join(sectionAudio, f), join(audioOut, f));
         }
       }

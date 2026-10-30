@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import Mascot from "./Mascot";
+import { sfx } from "../audio";
 
 export default function EndScreen(props: {
   stars: number;
@@ -21,7 +22,15 @@ export default function EndScreen(props: {
         }),
       300,
     );
-    return () => clearTimeout(t);
+    // chime as each earned star pops in (matches the spring delays below)
+    const chimes = Array.from(
+      { length: props.stars },
+      (_, i) => window.setTimeout(() => sfx.star(), 400 + (i + 1) * 300),
+    );
+    return () => {
+      clearTimeout(t);
+      chimes.forEach(clearTimeout);
+    };
   }, []);
 
   return (

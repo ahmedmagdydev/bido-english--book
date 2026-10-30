@@ -67,17 +67,33 @@ export async function todayStats(): Promise<Daily | null> {
   return (await db.daily.get(todayKey())) ?? null;
 }
 
+// Streak with one "freeze" (plan §7.4): a single missed day doesn't break
+// the chain — the freeze is consumed and the walk continues.
 export async function streak(): Promise<number> {
-  // consecutive days with any practice, ending today or yesterday
   const rows = await db.daily.orderBy("date").reverse().toArray();
   if (!rows.length) return 0;
   const days = new Set(rows.map((r) => r.date));
-  let streak = 0;
+  let count = 0;
+  let freezes = 1;
   const cursor = new Date();
   if (!days.has(todayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-  while (days.has(todayKey(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
+  while (true) {
+    if (days.has(todayKey(cursor))) {
+      count++;
+      cursor.setDate(cursor.getDate() - 1);
+      continue;
+    }
+    if (freezes > 0) {
+      // a freeze only helps across a real gap — the day after must exist
+      const after = new Date(cursor);
+      after.setDate(after.getDate() - 1);
+      if (days.has(todayKey(after))) {
+        freezes--;
+        cursor.setDate(cursor.getDate() - 1);
+        continue;
+      }
+    }
+    break;
   }
-  return streak;
+  return count;
 }

@@ -10,9 +10,14 @@
     "typecheck": "tsc -p tsconfig.json",
     "gen-assets": "node scripts/gen-assets.mjs",
     "sync-packs": "node scripts/sync-packs.mjs",
-    "gen-art": "node scripts/gen-art.mjs"
+    "gen-art": "node scripts/gen-art.mjs",
+    "ios:sync": "pnpm build && cap sync ios",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
+    "@fontsource/andika": "5.3.0",
     "@pagebuddy/schema": "workspace:*",
     "canvas-confetti": "^1.9.3",
     "dexie": "^4.0.11",
@@ -22,6 +27,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
