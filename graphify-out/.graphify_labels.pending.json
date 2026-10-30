@@ -1,0 +1,11 @@
+{
+  "3": "player/package.json",
+  "17": "@capacitor/cli",
+  "22": "vite.config.ts",
+  "23": "db.ts",
+  "24": "dependencies",
+  "25": "page-extract.ts",
+  "26": "scripts",
+  "27": "canvas-confetti",
+  "28": "zustand@^5.0.8"
+}

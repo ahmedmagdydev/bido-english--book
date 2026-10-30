@@ -1,1 +1,22 @@
-{"0": "App Shell & Pages", "1": "Extraction Pipeline", "2": "Exercise Components & Audio", "3": "Player Dependencies", "4": "iOS App Lifecycle", "5": "Audio Engine & Device Spike", "6": "Asset Generation Scripts", "7": "Lesson Pack Schema", "8": "Pipeline Dependencies", "9": "Session Builder", "10": "TS Base Config", "11": "Workspace Scripts", "12": "Schema Package", "13": "Project Documentation", "14": "Player TS Config", "15": "Pipeline TS Config", "16": "Schema TS Config", "17": "Capacitor Config", "18": "Swift Package", "19": "pnpm Workspace", "20": "CapApp-SPM Readme", "21": "CapApp-SPM Source", "22": "Vite Config"}
+{
+  "0": "App Shell & Pages",
+  "1": "Extraction Pipeline",
+  "2": "Exercise Components & Audio",
+  "4": "iOS App Lifecycle",
+  "5": "Audio Engine & Device Spike",
+  "6": "Asset Generation Scripts",
+  "7": "Lesson Pack Schema",
+  "8": "Pipeline Dependencies",
+  "9": "Session Builder",
+  "10": "TS Base Config",
+  "11": "Workspace Scripts",
+  "12": "Schema Package",
+  "13": "Project Documentation",
+  "14": "Player TS Config",
+  "15": "Pipeline TS Config",
+  "16": "Schema TS Config",
+  "18": "Swift Package",
+  "19": "pnpm Workspace",
+  "20": "CapApp-SPM Readme",
+  "21": "CapApp-SPM Source"
+}
