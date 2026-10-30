@@ -1,36 +1,20 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
+node_modules/
+dist/
+dev-dist/
+*.local
 .env
+.env.*
 
-# vercel
-.vercel
+# Copyrighted book content — never commit (plan §10, §12)
+content/
+pyhsical-book/*.pdf
+# synced pack copies are regenerated from content/ via `pnpm sync-packs`
+apps/player/public/packs/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# TTS binaries + voice models (large, re-downloadable)
+tools/tts/
+
+# OS
+Thumbs.db
+.DS_Store
+!.env.example

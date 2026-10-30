@@ -1,0 +1,24 @@
+{
+  "name": "@pagebuddy/pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@napi-rs/canvas": "^0.1.78",
+    "@pagebuddy/schema": "workspace:*",
+    "commander": "^14.0.1",
+    "dotenv": "^17.2.2",
+    "pdfjs-dist": "^5.4.149",
+    "sharp": "^0.34.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "tsx": "^4.20.5",
+    "typescript": "~5.9.2"
+  }
+}
