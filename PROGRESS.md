@@ -370,6 +370,32 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
    approvals provisional; (e) stale-SW blank page → Ctrl+Shift+R;
    (f) matchPairs word↔meaning for u2 column-matching;
    (g) iPad deploy needs Mac (Xcode) or tunnel+PWA.
+
+## Mac build handoff (2026-10-31, ready to run)
+
+Pushed: `c40b6df` on `main` (github.com/ahmedmagdydev/bido-english--book).
+On the Mac (`~/Desktop/projects/bido-english--book`):
+
+```bash
+git pull origin main
+pnpm install
+# packs are gitignored — copy them over instead:
+unzip ~/Desktop/pagebuddy-packs.zip   # → packs/<id>/…
+rsync -a packs/ apps/player/public/packs/
+pnpm --filter player ios:sync         # build + cap sync
+# Xcode → Run on the iPad (headless path in §4 item 1 also works)
+```
+
+- `pagebuddy-packs.zip` is on the Windows Desktop (94.6 MB, 1560 files):
+  arabic-g3-u1, arabic-g3-u2, english-g3-ch01, english-g3-scan —
+  every audio ref verified on disk before zipping.
+- ch01 audio was transcoded WAV→m4a **on Windows** this time
+  (ffmpeg, aac 80k — 106→27 MB) and `pack.json` refs rewritten; the
+  Mac-side copy already had m4a, so both copies now agree.
+- Stale `arabic-g3-s1-pilot` removed from public/packs.
+- SW change: pack manifests are NetworkFirst now (CacheFirst hid u2
+  for 90 days — the "journey shows one unit" bug); dev SW disabled.
+- public/packs total: 103 MB → final app bundle ~110 MB.
 1. ~~Deploy to the physical iPad~~ ✅ Done 2026-10-30 — headless pipeline:
    `pnpm --filter player ios:sync` → `xcodebuild -scheme App
    -destination 'id=00008030-001E6DAE0A30C02E' -allowProvisioningUpdates
