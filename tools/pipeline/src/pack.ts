@@ -85,12 +85,19 @@ export async function buildPack(opts: PackOptions): Promise<void> {
     const files = (await readdir(dir)).filter((f) =>
       f.endsWith(".reviewed.json"),
     );
+    // approved page keys — stems ("p142") and printed folios ("142") — used
+    // to drop enriched exercises whose sourcePage was excluded by the
+    // include sheet (status flipped to "skipped")
+    const okPages = new Set<string>();
     for (const f of files.sort()) {
       const stem = f.replace(".reviewed.json", "");
       const reviewed = ReviewedPageSchema.parse(
         JSON.parse(await readFile(join(dir, f), "utf8")),
       );
       if (reviewed.status !== "approved") continue;
+      okPages.add(stem);
+      if (reviewed.extract.pageNumber != null)
+        okPages.add(String(reviewed.extract.pageNumber));
       const ex = reviewed.extract;
       const srcPage = ex.pageNumber ?? ++pageN;
 
@@ -149,6 +156,13 @@ export async function buildPack(opts: PackOptions): Promise<void> {
       for (const e of all) {
         const ex = ExerciseItemSchema.parse(e);
         if (!ex.approved) continue;
+        // drop exercises sourced from a skipped/unselected page
+        const sp = (ex.payload as { sourcePage?: unknown }).sourcePage;
+        if (sp != null) {
+          const s = String(sp).replace(/^p/i, "");
+          if (!okPages.has(s) && !okPages.has(`p${s.padStart(3, "0")}`))
+            continue;
+        }
         // wire audio into comprehension payloads: passage lines reuse the
         // sent:* clips; question/options use cq:*/cqo:* clips when piper
         // generated them (player falls back to speechSynthesis otherwise)

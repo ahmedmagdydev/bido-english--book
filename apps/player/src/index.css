@@ -1433,6 +1433,7 @@ body {
   border-radius: 22px;
   border: 3px solid transparent;
   background: #fff;
+  color: var(--ink);
   cursor: pointer;
   font-family: inherit;
   position: relative;
@@ -1444,7 +1445,22 @@ body {
 .lang-card .lang-emoji { font-size: 3rem; }
 .lang-card .lang-name { font-size: 1.6rem; font-weight: 800; }
 .lang-card .lang-sub { font-size: 0.95rem; opacity: 0.7; }
-.lang-card .lang-packs { font-size: 0.85rem; opacity: 0.6; }
+.lang-card .lang-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  min-height: 2.4em;
+}
+.lang-card .lang-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.85;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-radius: 8px;
+  padding: 2px 10px;
+}
+.lang-card .lang-packs { font-size: 0.85rem; opacity: 0.6; font-weight: 700; }
 .lang-card .badge { position: absolute; top: 10px; inset-inline-end: 10px; }
 .lang-chip {
   position: absolute;

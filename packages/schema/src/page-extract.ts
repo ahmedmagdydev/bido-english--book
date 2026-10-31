@@ -58,7 +58,12 @@ export const PageExtractSchema = z.object({
 export type PageExtract = z.infer<typeof PageExtractSchema>;
 
 // Review layer: the review tool wraps the raw extract with status metadata.
-export const PageStatusSchema = z.enum(["raw", "needs_review", "approved"]);
+export const PageStatusSchema = z.enum([
+  "raw",
+  "needs_review",
+  "approved",
+  "skipped",
+]);
 export type PageStatus = z.infer<typeof PageStatusSchema>;
 
 export const ReviewedPageSchema = z.object({

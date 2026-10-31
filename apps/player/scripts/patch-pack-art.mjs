@@ -45,6 +45,29 @@ const MAP = {
     "الْاِبْتِدَائِيُّ": "ar-ibtidai.png",
     "يُعَرِّفُوا": "ar-yuarrifu.png",
   },
+  "arabic-g3-u2": {
+    "شَاهِقَةُ": "ar-shahiqqa.png",
+    "الْقَاحِلَةُ": "ar-qahila.png",
+    "الْغَنَّاءُ": "ar-ghanna.png",
+  },
+  "arabic-g3-u3": {
+    "الْكَرَمُ": "ar-karim.png",
+    "التَّعَاوُنُ": "ar-taawun.png",
+    "الشَّجَاعَةُ": "ar-shajaa.png",
+    "الصِّدْقُ": "ar-sadiq.png",
+    "الْأَمَانَةُ": "ar-amin.png",
+    "الْحَيَاءُ": "ar-hayaa.png",
+  },
+  "arabic-g3-u4": {
+    "الْهَاتِفِ": "ar-hatif.png",
+    "الْمُسْتَشْفَى": "ar-mustashfa.png",
+    "الْمُسْتَشْفَيَاتِ": "ar-mustashfa.png",
+    "الْفَضَاءِ": "ar-fada.png",
+    "الطَّقْسُ": "ar-taqs.png",
+    "حَالَةُ الْجَوِّ": "ar-taqs.png",
+    "رِسَالَةٌ إِلِكْتُرُونِيَّةٌ": "ar-risala.png",
+    "الْأَقْمَارُ الصِّنَاعِيَّةُ": "ar-qamar.png",
+  },
 };
 
 let patched = 0, missing = [];

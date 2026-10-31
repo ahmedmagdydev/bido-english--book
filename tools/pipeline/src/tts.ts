@@ -62,7 +62,7 @@ async function synthesize(
         outPath,
         ...(speed === "slow" ? ["--rate=-25%"] : []),
       ],
-      { maxBuffer: 4 * 1024 * 1024 },
+      { maxBuffer: 4 * 1024 * 1024, timeout: 90_000 },
     );
     return;
   }

@@ -298,16 +298,45 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
       **`patch-pack-art.mjs`** — repeatable word→art map per pack; repacks
       wipe `v.image` so ALWAYS re-run after `pack`, then `sync-packs`.
       32 vocab images wired total (23 ar + 9 en).
-- [x] **Extraction status 2026-10-31 eve**: p013–p106 COMPLETE on disk
-      (incl. p094 written by hand — u3 objectives page). Agents in flight
-      for p107–p170 (6 batches); their .raw.json files land in
-      `content/work/ar/` — validate → approve → enrich/bookex/tts/pack
-      next session. u2/u3 content NOT yet approved — keep `ar` section
-      scoped to ≤p052 until packs split by unit (see next actions).
-- [x] **Persistence + font polish**: `navigator.storage.persist()` called
-      on app start, result stored in `settings.storagePersisted` and shown
-      in the parent dashboard; self-hosted **Andika** via
-      `@fontsource/andika` (literacy font, plan §7.5).
+- [x] **Extraction status**: COMPLETE — all p013–p170 on disk and
+      schema-valid (see entry below). `ar` work dir now holds unit-1
+      reviewed files only (≤p052); later units live in `ar-u2/ar-u3/ar-u4`.
+- [x] **Extraction COMPLETE p013–p170** (2026-10-31): all 158 book pages
+      on disk in `content/work/ar/*.raw.json`, all PageExtractSchema-valid.
+      Unit dirs created: `ar-u2` (p053–092, 40pp), `ar-u3` (p093–132, 40pp),
+      `ar-u4` (p133–170, 38pp) — each has `*.reviewed.json` copies +
+      `comprehension.answers.json` (answer-book-verified keys); photos
+      shared via `content/photos/ar-uN` junctions → `photos/ar`.
+      Answer books u2/u3/u4 downloaded to `arabic-book/answers-unitN.pdf`,
+      rendered to `content/photos/answers-uN/` for key verification.
+- [x] **Units 2–4 enriched + bookex'd**: u2: 73 enrich + 32 bookex
+      (answer keys verified against `answers-unit2.pdf` — المصمك،
+      التبوك/القصيم/جدة، المصايف fruits/parks, sponge passage);
+      u3: 98 enrich + 12 bookex (عمار فوق السحاب test all "ج");
+      u4: 204 enrich + 19 bookex (الهاتف المحمول، شجرة الموز story Qs).
+      bookex parser fixed twice: nested parens `بِـ(الْ)` option groups,
+      quoted-speech `:` inside stems (lastIndexOf colon before ` / `),
+      `أ-`-style inline options, trailing `/` artifacts.
+- [x] **Include-sheet page selection** (parent picks which pages the
+      teacher assigned): `arabic-book/pages-include.xlsx` — one row per
+      page (p013–p170), cols: page, folio, unit, lesson, type, preview,
+      `included` (all FALSE by default — parent marks TRUE).
+      **`tools/pipeline/apply-include.py`** reads it and flips
+      `*.reviewed.json` status: TRUE→`approved`, FALSE→`skipped`
+      (new `PageStatusSchema` enum value — pack/bookex/enrich all treat
+      non-approved as excluded). pack.ts additionally drops enriched
+      exercises whose `payload.sourcePage` (stem or folio) belongs to a
+      skipped page — verified: p142 skipped → 2 exercises + 1 page drop.
+      **Workflow**: parent edits xlsx → `python tools/pipeline/apply-include.py`
+      → re-run `enrich`/`bookex`/`tts`/`pack`/`patch-pack-art`/`sync-packs`
+      for affected units. Non-destructive: raw/reviewed files never deleted.
+- [x] **tts.ts hardening**: 90s execFile timeout on edge-tts calls
+      (hung child killed → retry path runs; found when a stalled call
+      froze u2 TTS for 20 min).
+- [x] **Art batch 3 queued** (11 images): u2 شاهقة/القاحلة/الغناء
+      landscapes, u3 شجاع/حياء virtues, u4 هاتف/مستشفى/قمر/فضاء/طقس/
+      رسالة-إلكترونية nouns; patch-pack-art.mjs extended for packs
+      arabic-g3-u2/u3/u4.
 - [x] **Generated art + animations** (2026-10-30): local ComfyUI generated
       9 flat-vector images (`apps/player/scripts/gen-art.mjs` →
       `apps/player/public/art/`): fox mascot (read + wave variants),
@@ -324,21 +353,22 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
 
 ## 4. Next actions (in order)
 
-0. **Arabic track — u1 pack complete; extraction finishing.** Remaining:
-   (a) agents writing p107–p170 into `content/work/ar/` — validate →
-   split per unit (`ar-u2` dir for p053–092, `ar-u3` for p093–~1xx) →
-   approve → enrich + **bookex** (+ extend `comprehension.answers.json`
-   per unit; answer books exist online for u2/u3 too — same kottby/
-   muealimuk mirrors) → tts → pack → **patch-pack-art** → sync;
-   (b) **RTL visual check** — load `arabic-g3-u1`, eyeball session/reader/
-   home direction, tile mirroring, TraceWrite canvas;
-   (c) cloze `blank` may drop a trailing harakat leaving an orphan
-   diacritic (cosmetic, check p013 cloze); (d) parent review pass —
-   all approvals provisional (bookex answers are answer-book-verified,
-   enrich items are not); (e) stale-SW blank page: hard-refresh twice
-   or unregister SW (devOptions.enabled); (f) matchPairs/u2 column
-   matching ((أ)/(ب)) — needs pair keys; MatchPairs component only
-   matches identical words today — extend for word↔meaning pairs.
+0. **Arabic track — SELECTION APPLIED, packs rebuilt** (2026-10-31):
+   parent marked 36 pages TRUE → apply-include flipped statuses →
+   **`arabic-g3-u1`** rebuilt: 19pp (folios 21–29,32–40,42), 14 vocab,
+   36 sent, 81 ex, 126 audio refs ✓; **`arabic-g3-u2`** NEW: 17pp
+   (folios 53?,61–66,68,70–78), 9 vocab, 32 sent, 81 ex, 134 refs ✓.
+   u3/u4 fully skipped (no TRUE marks) — their TTS (330/512 clips) +
+   enrich/bookex stay cached for future selections. Verified: 0 missing
+   audio/page refs; sync-packs → 4 packs live; prod build clean (208
+   precache, ~15 MB). To re-select: edit xlsx → apply-include →
+   pack+patch+sync. Remaining:
+   (b) **RTL visual check** — eyeball session/reader/tile mirroring/
+   TraceWrite canvas (dev :5174 or tunnel);
+   (c) cloze `blank` orphan-harakat check; (d) parent review pass —
+   approvals provisional; (e) stale-SW blank page → Ctrl+Shift+R;
+   (f) matchPairs word↔meaning for u2 column-matching;
+   (g) iPad deploy needs Mac (Xcode) or tunnel+PWA.
 1. ~~Deploy to the physical iPad~~ ✅ Done 2026-10-30 — headless pipeline:
    `pnpm --filter player ios:sync` → `xcodebuild -scheme App
    -destination 'id=00008030-001E6DAE0A30C02E' -allowProvisioningUpdates

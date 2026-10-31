@@ -204,6 +204,64 @@ const JOBS = [
     prompt:
       "two schoolboys shaking hands and introducing themselves to each other, smiling" + STYLE,
   },
+  // ---- Arabic u2 vocab (Regions of My Country) ----
+  {
+    file: "ar-shahiqqa.png",
+    prompt:
+      "very tall towering mountain peaks reaching into the clouds, majestic cliffs" + STYLE,
+  },
+  {
+    file: "ar-qahila.png",
+    prompt:
+      "dry cracked desert land with a lone wilting plant, barren arid ground" + STYLE,
+  },
+  {
+    file: "ar-ghanna.png",
+    prompt:
+      "lush green garden full of flowers and singing little birds, verdant paradise" + STYLE,
+  },
+  // ---- Arabic u3 vocab (Muslim Manners) ----
+  {
+    file: "ar-shajaa.png",
+    prompt:
+      "brave little boy standing tall and confident facing a big friendly dog, courage" + STYLE,
+  },
+  {
+    file: "ar-hayaa.png",
+    prompt:
+      "sweet modest girl in hijab smiling shyly with hands together, bashful humility" + STYLE,
+  },
+  // ---- Arabic u4 vocab (Communication) ----
+  {
+    file: "ar-hatif.png",
+    prompt:
+      "friendly smartphone with a smiling screen face and signal waves, mobile phone" + STYLE,
+  },
+  {
+    file: "ar-mustashfa.png",
+    prompt:
+      "modern hospital building with a red crescent sign, ambulance at the entrance" + STYLE,
+  },
+  {
+    file: "ar-qamar.png",
+    prompt:
+      "cute satellite with solar panel wings orbiting planet earth in space" + STYLE,
+  },
+  {
+    file: "ar-fada.png",
+    prompt:
+      "colorful planets and stars in outer space, a small rocket flying between them" + STYLE,
+  },
+  {
+    file: "ar-taqs.png",
+    prompt:
+      "sun cloud and raindrop friends showing different weather, weather forecast" + STYLE,
+  },
+  {
+    file: "ar-risala.png",
+    prompt:
+      "laptop screen showing a flying envelope email message, electronic mail" + STYLE,
+  },
   // ---- Arabic-world mascot variant ----
   {
     file: "mascot-ar.png",

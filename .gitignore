@@ -9,6 +9,7 @@ dev-dist/
 content/
 pyhsical-book/*.pdf
 arabic-book/*.pdf
+arabic-book/pages-include.xlsx
 # synced pack copies are regenerated from content/ via `pnpm sync-packs`
 apps/player/public/packs/
 

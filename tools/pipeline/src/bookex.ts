@@ -17,7 +17,7 @@ import { workDir } from "./paths.js";
 // → correct option text | boolean), then a behavior polarity list for tf, else
 // the item is skipped (never emits an unkeyed answer).
 
-const KIND_RE = /true_false|choose_correct|choose_true|multiple choice|mark/i;
+const KIND_RE = /true_false|choose|tick|multiple choice|mark|underline|✓/i;
 const NUM_RE = /^[٠-٩0-9]+\s*[.\-]/;
 const OPT_PREFIX_RE = /^[أ-دabcd]\s*[-–).]/;
 
@@ -50,26 +50,61 @@ interface Parsed {
   options?: string[];
 }
 
+const LABEL_RE = /^[(（]?[أ-دabcd١-٤1-4][)）]\s*/;
+const cleanStem = (s: string) => s.replace(NUM_RE, "").replace(LABEL_RE, "").trim();
+
 function parseItems(items: string[]): Parsed[] {
   const out: Parsed[] = [];
   let stem: string | null = null;
   let opts: string[] = [];
   const flushStem = () => {
-    if (stem && opts.length >= 2) out.push({ kind: "mcq", stem, options: opts });
-    else if (stem) out.push({ kind: "tf", stem });
+    if (stem && opts.length >= 2) out.push({ kind: "mcq", stem: cleanStem(stem), options: opts });
+    else if (stem) out.push({ kind: "tf", stem: cleanStem(stem) });
     stem = null;
     opts = [];
   };
   for (const raw of items) {
     const t = raw.trim();
     if (!t) continue;
+    // "stem (o1 – o2 – o3)" — options in trailing parens, dash-separated;
+    // options may contain nested parens like بـ(ال)
+    let pm: { index: number; body: string } | null = null;
+    for (const m of t.matchAll(/\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*[.:…]*\s*$/g)) {
+      if (m[1].includes("–")) pm = { index: m.index!, body: m[1] };
+    }
+    if (pm) {
+      const options = pm.body.split("–").map((o) => o.trim()).filter(Boolean);
+      const stemTxt = cleanStem(t.slice(0, pm.index));
+      if (options.length >= 2 && stemTxt) {
+        flushStem();
+        out.push({ kind: "mcq", stem: stemTxt, options });
+        continue;
+      }
+    }
+    // "stem أ- o1 ب- o2 ج- o3" — inline letter-prefixed options
+    const im = t.match(/^(.*?)([أ-د])[-–]\s*\S/);
+    if (im && /[أ-د][-–]/.test(t.slice(im[1].length))) {
+      const stemTxt = cleanStem(im[1]);
+      const rest = t.slice(im[1].length);
+      const options = rest
+        .split(/[أ-د][-–]\s*/)
+        .map((o) => o.replace(/[.\s]+$/, "").trim())
+        .filter(Boolean);
+      if (options.length >= 2 && stemTxt) {
+        flushStem();
+        out.push({ kind: "mcq", stem: stemTxt, options });
+        continue;
+      }
+    }
     if (t.includes(" / ")) {
       flushStem();
-      const ci = t.indexOf(":");
-      const stemTxt = ci > 0 ? t.slice(0, ci).replace(NUM_RE, "").trim() : t;
+      // options start at the first " / "; stem ends at the last ":" before it
+      // (a quoted "…:" inside the stem must not truncate it)
+      const ci = t.lastIndexOf(":", t.indexOf(" / "));
+      const stemTxt = ci > 0 ? cleanStem(t.slice(0, ci)) : cleanStem(t);
       const options = (ci > 0 ? t.slice(ci + 1) : t)
         .split("/")
-        .map((o) => o.replace(/[.\s]+$/, "").replace(/^[.\s]+/, "").trim())
+        .map((o) => o.replace(/[.\s/]+$/, "").replace(/^[.\s/]+/, "").trim())
         .filter(Boolean);
       if (options.length >= 2) out.push({ kind: "mcq", stem: stemTxt, options });
       continue;
@@ -84,8 +119,9 @@ function parseItems(items: string[]): Parsed[] {
       opts.push(t.replace(/[.\s]+$/, "").trim());
       continue;
     }
-    // bare statement — needs 2+ words to be a judgeable sentence
+    // bare statements → tf; single words wrapped as "mentioned in the text?"
     if (t.split(/\s+/).length >= 2) out.push({ kind: "tf", stem: t });
+    else out.push({ kind: "tf", stem: `مِمَّا ذُكِرَ فِي النَّصِّ: ${t}` });
   }
   flushStem();
   return out;

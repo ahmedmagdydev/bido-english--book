@@ -45,8 +45,20 @@ export default function LangGate() {
 
   const pick = async (lang: PackLang) => {
     sfx.tap();
-    await switchLang(lang);
-    window.location.hash = "#/";
+    // switchLang touches IndexedDB — race it so a blocked upgrade (another
+    // open tab) can never swallow the tap; Home updates once it resolves
+    await Promise.race([
+      switchLang(lang),
+      new Promise((r) => setTimeout(r, 1000)),
+    ]);
+    // First run: the gate renders inline at "#/" (not "#/lang"), so
+    // assigning "#/" fires no hashchange and nothing would navigate.
+    // Reload instead — the gate re-checks activeLang and lands on Home.
+    if (window.location.hash === "#/lang") {
+      window.location.hash = "#/";
+    } else {
+      window.location.reload();
+    }
   };
 
   if (!ready) return null;
@@ -86,8 +98,15 @@ export default function LangGate() {
               <span className="lang-emoji">{w.emoji}</span>
               <span className="lang-name">{w.name}</span>
               <span className="lang-sub">{w.sub}</span>
+              <span className="lang-titles">
+                {packs.slice(0, 3).map((p) => (
+                  <span key={p.id} className="lang-title">
+                    {p.title}
+                  </span>
+                ))}
+              </span>
               <span className="lang-packs">
-                {packs.length} {lang === "ar" ? "دروس" : `pack${packs.length > 1 ? "s" : ""}`}
+                {packs.length} {lang === "ar" ? "دروس" : `pack${packs.length > 1 ? "s" : ""}`} ›
               </span>
               {current === lang && <span className="badge">current</span>}
             </motion.button>
