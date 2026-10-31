@@ -320,13 +320,14 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
 - [x] **Include-sheet page selection** (parent picks which pages the
       teacher assigned): `arabic-book/pages-include.xlsx` — one row per
       page (p013–p170), cols: page, folio, unit, lesson, type, preview,
-      `included` (all FALSE by default — parent marks TRUE).
-      **`tools/pipeline/apply-include.py`** reads it and flips
-      `*.reviewed.json` status: TRUE→`approved`, FALSE→`skipped`
-      (new `PageStatusSchema` enum value — pack/bookex/enrich all treat
-      non-approved as excluded). pack.ts additionally drops enriched
-      exercises whose `payload.sourcePage` (stem or folio) belongs to a
-      skipped page — verified: p142 skipped → 2 exercises + 1 page drop.
+      `included` — tri-state: TRUE ships, FALSE excludes, **blank =
+      undecided** (post-p078 rows are blank). **`tools/pipeline/
+      apply-include.py`** maps them: TRUE→`approved`, FALSE→`skipped`,
+      blank→`needs_review` (new `PageStatusSchema` enum adds `skipped` —
+      pack/bookex/enrich all treat non-approved as excluded). pack.ts
+      additionally drops enriched exercises whose `payload.sourcePage`
+      (stem or folio) belongs to a skipped page — verified: p142
+      skipped → 2 exercises + 1 page drop.
       **Workflow**: parent edits xlsx → `python tools/pipeline/apply-include.py`
       → re-run `enrich`/`bookex`/`tts`/`pack`/`patch-pack-art`/`sync-packs`
       for affected units. Non-destructive: raw/reviewed files never deleted.
