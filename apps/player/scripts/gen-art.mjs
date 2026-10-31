@@ -2,7 +2,7 @@
 // LoRA), downloads results, and resizes into public/art/.
 // Requires ComfyUI running on 127.0.0.1:8188 (start-comfyui.bat).
 // Run: pnpm gen-art
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -59,6 +59,156 @@ const JOBS = [
     file: "vocab-sunrise.png",
     prompt:
       "cheerful yellow sun rising over green hills saying good morning, soft rays" + STYLE,
+  },
+  // ---- Arabic unit-1 vocab art (Dealing with Others) ----
+  {
+    file: "ar-karim.png",
+    prompt:
+      "happy little boy in white thobe giving a wrapped gift to his friend, generous sharing" + STYLE,
+  },
+  {
+    file: "ar-taawun.png",
+    prompt:
+      "two smiling children carrying a cardboard box together, teamwork cooperation" + STYLE,
+  },
+  {
+    file: "ar-sadiq.png",
+    prompt:
+      "honest little boy raising his hand to tell the truth, sincere happy face" + STYLE,
+  },
+  {
+    file: "ar-rahim.png",
+    prompt:
+      "kind boy gently helping an elderly man carry his grocery bag, compassion" + STYLE,
+  },
+  {
+    file: "ar-muhadhdhab.png",
+    prompt:
+      "polite boy in white thobe greeting an adult with a respectful handshake and smile" + STYLE,
+  },
+  {
+    file: "ar-amin.png",
+    prompt:
+      "honest boy returning a dropped wallet to a thankful man, trustworthiness" + STYLE,
+  },
+  {
+    file: "ar-iqlaaq.png",
+    prompt:
+      "big passenger airplane taking off into a bright sky, runway below, takeoff" + STYLE,
+  },
+  {
+    file: "ar-mudhif.png",
+    prompt:
+      "friendly smiling flight attendant in uniform welcoming passengers inside airplane cabin" + STYLE,
+  },
+  {
+    file: "ar-dajij.png",
+    prompt:
+      "noisy children shouting and running in airplane aisle, a boy covering his ears, commotion" + STYLE,
+  },
+  {
+    file: "ar-yutali.png",
+    prompt:
+      "boy sitting in an airplane seat happily reading a colorful magazine" + STYLE,
+  },
+  // app icon — mascot face, centered, works small
+  {
+    file: "icon-art.png",
+    prompt:
+      "cute fox cub face head icon, centered symmetrical portrait, big friendly eyes, warm orange fur, simple bold app-icon style, cream background" + STYLE,
+  },
+  // ---- English ch01 remaining vocab (Gold Rush lesson) ----
+  {
+    file: "vocab-panned.png",
+    prompt:
+      "young boy kneeling by a river panning for gold with a round pan, water swirling" + STYLE,
+  },
+  {
+    file: "vocab-bolted.png",
+    prompt:
+      "two twin boys sitting bolt upright in a bed, startled wide awake, morning light" + STYLE,
+  },
+  {
+    file: "vocab-washedaway.png",
+    prompt:
+      "river current washing away small pebbles and dirt downstream, swirling water" + STYLE,
+  },
+  {
+    file: "vocab-headed.png",
+    prompt:
+      "line of pioneer families with wagons walking toward a small mountain town in the distance" + STYLE,
+  },
+  {
+    file: "vocab-strike.png",
+    prompt:
+      "excited prospector holding up a shiny gold nugget triumphantly, strike gold moment" + STYLE,
+  },
+  // ---- Arabic bad-trait vignettes (book teaches them as what NOT to be) ----
+  {
+    file: "ar-mubadhdhir.png",
+    prompt:
+      "boy leaving the water tap running wastefully, water overflowing from sink" + STYLE,
+  },
+  {
+    file: "ar-tammaa.png",
+    prompt:
+      "greedy little boy grabbing a whole plate of sweets for himself, other kid watching sadly" + STYLE,
+  },
+  {
+    file: "ar-kadhdhab.png",
+    prompt:
+      "boy hiding a broken vase behind his back looking guilty, telling a fib" + STYLE,
+  },
+  {
+    file: "ar-ghashshash.png",
+    prompt:
+      "boy peeking at a classmate's exam paper trying to cheat, school desk" + STYLE,
+  },
+  {
+    file: "ar-dhalim.png",
+    prompt:
+      "bigger boy snatching a toy away from a smaller sad child, unfair bullying" + STYLE,
+  },
+  {
+    file: "ar-bakhil.png",
+    prompt:
+      "stingy boy hugging all his toys to his chest refusing to share, other kid reaching" + STYLE,
+  },
+  {
+    file: "ar-musharrifa.png",
+    prompt:
+      "kind female supervisor in hijab with a clipboard organizing children in a line" + STYLE,
+  },
+  {
+    file: "ar-hady.png",
+    prompt:
+      "glowing lantern lighting a winding path at dusk, guidance light" + STYLE,
+  },
+  {
+    file: "ar-nammam.png",
+    prompt:
+      "two kids whispering and pointing behind another child's back, gossiping" + STYLE,
+  },
+  {
+    file: "ar-muallim.png",
+    prompt:
+      "friendly teacher standing at a classroom whiteboard pointing at a lesson, students at desks" + STYLE,
+  },
+  {
+    file: "ar-ibtidai.png",
+    prompt:
+      "cheerful elementary school building with a gate and flag, children walking in" + STYLE,
+  },
+  {
+    file: "ar-yuarrifu.png",
+    prompt:
+      "two schoolboys shaking hands and introducing themselves to each other, smiling" + STYLE,
+  },
+  // ---- Arabic-world mascot variant ----
+  {
+    file: "mascot-ar.png",
+    prompt:
+      "adorable little fox cub wearing a small white keffiyeh head scarf, waving hello, big kind eyes" + STYLE,
   },
 ];
 
@@ -149,7 +299,12 @@ async function waitForImage(promptId, timeoutMs = 300000) {
   throw new Error("timeout waiting for image");
 }
 
+const force = process.argv.includes("--force");
 for (const [i, job] of JOBS.entries()) {
+  if (!force && existsSync(join(outDir, job.file))) {
+    console.log(`${job.file}: exists — skipped (use --force to regenerate)`);
+    continue;
+  }
   const prefix = `pagebuddy/${job.file.replace(".png", "")}`;
   process.stdout.write(`${job.file}: queuing… `);
   const id = await queue(job.prompt, 4200 + i * 137, prefix);

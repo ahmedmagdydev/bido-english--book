@@ -3,10 +3,10 @@
 > Living document. Any developer or AI model can pick this project up from
 > here. **Update it before ending every work session.**
 >
-> **Last updated:** 2026-10-30 (late evening, Mac)
+> **Last updated:** 2026-10-31 (Windows)
 > **Current phase:** Phase 2 MVP playable · Phase 3 started (parent area +
-> speak mode built) · Phase 1 content review pass done · ready to deploy to
-> the physical iPad
+> speak mode built) · deployed to physical iPad · **Arabic track: Unit-1 pack
+> complete (`arabic-g3-u1`, 40pp + book-exercise comprehension + full art)**
 >
 > **Continuation note:** **Capacitor path is DONE on the Mac** — repo now at
 > `~/Desktop/projects/bido-english--book` with all packs/audio intact.
@@ -195,6 +195,115 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
       returns status **0** for valid files — `playClip`/`pack.ts` checked
       `.ok` → audio reported ERROR:0 on device. Now validates
       `byteLength`/zod-parse instead. Spike T2 then passed on hardware.
+- [x] **ARABIC TRACK — pilot pack playable end-to-end** (2026-10-31):
+      plan `arabic-book/mvp-plan-arabic.md`. Book = Saudi MoE G3 Arabic
+      lang. part 1 (1448 ed., 170 pp) → `pdf2img` done
+      (`content/photos/ar/p001–p170.jpg`). Pages 1–12 skipped per user
+      (front matter). **Schema**: `PackLang`, `detectLang`, Arabic-aware
+      `normWord`/`wordList`/`lettersOf` (tashkeel stripped for compare,
+      letter+harakat grapheme tiles), pack `language`/`dir` fields.
+      **Pipeline**: `enrich.ts` language-aware (literal cloze replace —
+      `\b` doesn't work on Arabic — Arabic distractors, grapheme tiles);
+      `pack.ts` hash-slug fallback for non-Latin ids + auto `detectLang`;
+      `tts.ts` `edgetts` provider (`edge-tts` Py exe on PATH, voice
+      `ar-SA-ZariyahNeural`, slow = `--rate=-25%`, mp3 out); CLI flags
+      `tts --provider`, `pack --lang`. **Player**: `dir`/`lang` set on
+      `documentElement` at pack load; `strings.ts` EN+AR kid chrome;
+      `Cloze`/`Flashcard`/`EndScreen`/`HomePage`/`builder.ts` take lang;
+      Arabic font stack + RTL CSS in index.css. **Pilot E2E PASSED**:
+      extract p013–p022 (10 pp, all schema-valid) → provisional approve →
+      enrich 52 exercises (verified grapheme tiles كَ رِ ي مٌ + ب/ت/ث
+      distractors) → tts edgetts 62 clips → **pack `arabic-g3-s1-pilot`**
+      (16 vocab, 11 sent, 52 ex, language:ar dir:rtl, 1.6 MB mp3) →
+      synced → serves 200 → typecheck + prod build clean (168 precache,
+      6.4 MB). Unit 1 = «التعامل مع الآخرين»; reading lesson «عادل في
+      الطائرة» starts p022 — pilot vocab came mostly from p015's
+      12-adjective bank + p021's song glossary. Second batch p023–p034
+      extracted same session (needs validate → approve → chain re-run).
+      Voice-studio OmniVoice parked (needs ref clip; Edge voice is good).
+      NOT yet RTL-verified visually on device/iPad — next session's first
+      check.
+- [x] **TWO-WORLD SPLIT — en/ar feel like separate apps** (2026-10-31):
+      (a) DB v2 migration — `review` PK `[packId+itemId]` (was: `s_001`
+      collided across packs!), `attempts` +`packId`/`lang`, `daily` PK
+      `[date+lang]`; all pre-v2 rows default `lang:"en"`. (b) `progress.ts`
+      — `recordAttempt/finishSession/todayStats/streak/langDailies` take
+      lang. (c) `packs/index.json` now carries `meta:[{id,title,language,
+      dir}]` (sync-packs.mjs) → `listPackMeta`, `settings.activeLang`,
+      `store.switchLang`. (d) `LangGate` `#/lang` — two big world cards
+      (English coral / العربية mint, RTL card), shown on first run when
+      >1 language; Home `🌐` chip switches anytime. (e) Home/Map/Rewards/
+      Parent/Session/Speak all scoped to active lang (stars, streak, pet,
+      stickers incl. per-lang `bossClears:lang`); Parent export stays
+      global. (f) `App` HomeOrGate — ⚠️ was a blank-page bug: gate awaited
+      a Dexie call that blocks during upgrade when another tab is open;
+      now 1.2s timeout + splash fallback.
+- [x] **SpellingTiles Arabic fix** (2026-10-31): component was English-
+      hardcoded (`/[^a-z']/g` → `need=0`, dead tiles). Now grapheme-unit
+      answer array via `lettersOf`, `normWord` compare, `t()` strings.
+- [x] **TraceWrite exercise** (new type `trace`, 2026-10-31): finger-
+      tracing writing practice — canvas dotted-outline guide word +
+      ink layer + hidden glyph mask measures coverage (≥55% + ≥1 stroke
+      → solve). Language-agnostic (Arabic shaping/harakat free), RTL ok.
+      Wired: schema enum, `synthTrace` in builder (box≤2 rotation),
+      SessionPage map, strings (تتبَّع الكلمة / امشِ على النقاط / امسح),
+      `.trace-*` CSS. Note: tolerant — no wrong answers, no off-line
+      penalty (kind UX); scribble-coverage isn't graded.
+- [x] **Arabic vocab art + app icon** (ComfyUI, 2026-10-31): 10 flat-
+      vector images for the illustratable pilot words (كريم، متعاون،
+      صادق، رحيم، مهذب، أمين، المضيف، يطالع، ضجيجًا، لإقلاع) →
+      `public/art/ar-*.png` + copied into ar pack `images/art/` and
+      patched onto `v.image` (Flashcard + picturePick render them).
+      Negative/abstract words intentionally unillustrated. `icon-art.png`
+      (fox face) → icon-192/512/maskable/apple-touch-icon. gen-art.mjs
+      gained `--force` + skip-existing.
+- [x] **Arabic extraction batch 2+3 running**: p013–p034 done & packed
+      (pilot now 22pp / 22 vocab / 24 sent / 79 ex / 100 Edge clips —
+      first TTS run stalled once mid-batch, kill+resume via cache worked).
+      Unit 1 = «التعامل مع الآخرين» ends ~p052 (التقويم التجميعي p048–52);
+      **Unit 2 «رُبُوعُ مِنْ بِلَادِي»** starts p053, its Lesson 1
+      «من معالم بلادي» ~p058. Agents still running for p035–p082.
+- [x] **Unit-1 Arabic pack COMPLETE → `arabic-g3-u1`** (2026-10-31 eve):
+      pilot renamed/superseded (old `arabic-g3-s1-pilot` deleted). Approved
+      all p013–p052 → enrich 111 ex + **bookex 17 comprehension items** →
+      tts edgetts **708 clips** → pack: 40 pages / 26 vocab / 47 sent /
+      128 ex (17 comprehension, rest deterministic) / all audio resolves /
+      23 vocab illustrated. Unit map (extraction confirmed): u1 ends p052,
+      u2 «ربوع من بلادي» p053–p092 (L1 الرياض p058+, L2 مصايفنا p072+,
+      نموذج اختبار٢ p083+, تقويم٢ p087+), **u3 «أخلاق المسلم» starts p093**
+      (not p107 as guessed; L1 التعاون p102+). u4 وسائل الاتصالات later.
+- [x] **`bookex` pipeline stage — book's own exercises become playable**
+      (2026-10-31 eve): `tools/pipeline/src/bookex.ts` + CLI `bookex
+      <section>` → `enriched.bookex.json` (pack.ts already packs every
+      `enriched.*.json`). Parses `exercisesOnPage` {instruction,kind,items}
+      into `comprehension` exercises: `"stem: a. / b."` → mcq, numbered
+      stem+option-items → mcq, bare statements → tf (book's ✓/✗ format =
+      TrueFalse). Answers from `work/<section>/comprehension.answers.json`
+      (normalized key → option|bool) + GOOD/BAD polarity wordlists for
+      unkeyed tf; unanswerable items skipped (never a guessed grade).
+      **Answer book obtained**: `arabic-book/answers-unit1.pdf` (52pp
+      companion, muealimuk mirror — kottby is Cloudflare-gated) rendered
+      to `content/photos/answers-u1/`; keys verified against printed
+      checkmarks (caught that «خجل طارق» is ✗ — he'd have been guessed
+      true). 16 items emitted for u1 (9 mcq + 7→8 tf), all approved.
+      `tts.ts` now voices `cq:`/`cqo:` from ALL `enriched.*.json` (was
+      only `enriched.comprehension.json`) + per-clip retry once →
+      skip-with-warning (edge-tts NoAudioReceived no longer kills runs;
+      manifest only records successful files).
+- [x] **Art batch 2 — 28 more ComfyUI images** (2026-10-31 eve): English
+      vocab (panned, bolted, washed away, headed, strike), 9 Arabic
+      bad-trait vignettes the book teaches as what-NOT-to-be (مبذر طماع
+      كذاب غشاش ظالم بخيل مشرفة هدي نمام), 3 more u1 words (معلم ابتدائي
+      يعرفوا), `mascot-ar.png` (fox in keffiyeh — Arabic-world variant).
+      **`patch-pack-art.mjs`** — repeatable word→art map per pack; repacks
+      wipe `v.image` so ALWAYS re-run after `pack`, then `sync-packs`.
+      32 vocab images wired total (23 ar + 9 en).
+- [x] **Extraction status 2026-10-31 eve**: p013–p106 COMPLETE on disk
+      (incl. p094 written by hand — u3 objectives page). Agents in flight
+      for p107–p170 (6 batches); their .raw.json files land in
+      `content/work/ar/` — validate → approve → enrich/bookex/tts/pack
+      next session. u2/u3 content NOT yet approved — keep `ar` section
+      scoped to ≤p052 until packs split by unit (see next actions).
 - [x] **Persistence + font polish**: `navigator.storage.persist()` called
       on app start, result stored in `settings.storagePersisted` and shown
       in the parent dashboard; self-hosted **Andika** via
@@ -215,6 +324,21 @@ player. No accounts, no tracking, all progress in IndexedDB on-device.
 
 ## 4. Next actions (in order)
 
+0. **Arabic track — u1 pack complete; extraction finishing.** Remaining:
+   (a) agents writing p107–p170 into `content/work/ar/` — validate →
+   split per unit (`ar-u2` dir for p053–092, `ar-u3` for p093–~1xx) →
+   approve → enrich + **bookex** (+ extend `comprehension.answers.json`
+   per unit; answer books exist online for u2/u3 too — same kottby/
+   muealimuk mirrors) → tts → pack → **patch-pack-art** → sync;
+   (b) **RTL visual check** — load `arabic-g3-u1`, eyeball session/reader/
+   home direction, tile mirroring, TraceWrite canvas;
+   (c) cloze `blank` may drop a trailing harakat leaving an orphan
+   diacritic (cosmetic, check p013 cloze); (d) parent review pass —
+   all approvals provisional (bookex answers are answer-book-verified,
+   enrich items are not); (e) stale-SW blank page: hard-refresh twice
+   or unregister SW (devOptions.enabled); (f) matchPairs/u2 column
+   matching ((أ)/(ب)) — needs pair keys; MatchPairs component only
+   matches identical words today — extend for word↔meaning pairs.
 1. ~~Deploy to the physical iPad~~ ✅ Done 2026-10-30 — headless pipeline:
    `pnpm --filter player ios:sync` → `xcodebuild -scheme App
    -destination 'id=00008030-001E6DAE0A30C02E' -allowProvisioningUpdates

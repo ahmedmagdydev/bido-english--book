@@ -6,6 +6,7 @@ import { extractSection } from "./extract.js";
 import { pdfToImages } from "./pdf.js";
 import { enrichSection } from "./enrich.js";
 import { comprehendSection } from "./comprehend.js";
+import { bookexSection } from "./bookex.js";
 import { ttsSection } from "./tts.js";
 import { buildPack } from "./pack.js";
 
@@ -58,9 +59,18 @@ program
   });
 
 program
-  .command("tts")
+  .command("bookex")
   .argument("<section>")
   .action(async (section: string) => {
+    await bookexSection(section);
+  });
+
+program
+  .command("tts")
+  .argument("<section>")
+  .option("--provider <p>", "tts provider: piper | edgetts")
+  .action(async (section: string, o: { provider?: string }) => {
+    if (o.provider) process.env.TTS_PROVIDER = o.provider;
     await ttsSection(section);
   });
 
@@ -69,14 +79,16 @@ program
   .requiredOption("--sections <list>", "comma-separated sections, e.g. scan,ch01")
   .requiredOption("--pack-id <id>", "e.g. english-g3-ch01")
   .option("--title <t>", "pack title", "English")
+  .option("--lang <l>", "pack language: en | ar (default: auto-detect)")
   .option("--version <n>", "pack version", (v) => parseInt(v, 10), 1)
   .action(
-    async (o: { sections: string; packId: string; title: string; version: number }) => {
+    async (o: { sections: string; packId: string; title: string; version: number; lang?: string }) => {
       await buildPack({
         sections: o.sections.split(",").map((s) => s.trim()),
         packId: o.packId,
         title: o.title,
         version: o.version,
+        language: o.lang === "ar" || o.lang === "en" ? o.lang : undefined,
       });
     },
   );

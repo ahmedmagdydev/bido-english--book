@@ -4,10 +4,12 @@ import type { VocabItem } from "@pagebuddy/schema";
 import SpeakButton from "./SpeakButton";
 import { playPackClip } from "../audio";
 import { packUrl } from "../pack";
+import { t } from "../strings";
 
 export default function Flashcard(props: {
   packId: string;
   vocab: VocabItem;
+  lang?: string;
   onResult: (knewIt: boolean) => void;
 }) {
   const v = props.vocab;
@@ -23,7 +25,7 @@ export default function Flashcard(props: {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 280, damping: 20 }}
     >
-      <p className="exercise-label">New word</p>
+      <p className="exercise-label">{t(props.lang, "newWord")}</p>
       {v.image && (
         <img
           className="vocab-img"
@@ -34,9 +36,9 @@ export default function Flashcard(props: {
       <h2 className="big-word">{v.word}</h2>
       {v.pos && v.pos !== "other" && <span className="badge">{v.pos}</span>}
       <div className="row" style={{ marginTop: 10 }}>
-        <SpeakButton packId={props.packId} clip={v.audio.normal} label="Hear it" />
+        <SpeakButton packId={props.packId} clip={v.audio.normal} label={t(props.lang, "hearIt")} />
         {v.audio.slow && (
-          <SpeakButton packId={props.packId} clip={v.audio.slow} label="Slow" />
+          <SpeakButton packId={props.packId} clip={v.audio.slow} label={t(props.lang, "slow")} />
         )}
       </div>
       {v.example && <p className="example">"{v.example}"</p>}
@@ -46,14 +48,14 @@ export default function Flashcard(props: {
           style={{ background: "#f8d9d9", color: "#8f2f2f" }}
           onClick={() => props.onResult(false)}
         >
-          Again
+          {t(props.lang, "again")}
         </button>
         <button
           className="secondary"
           style={{ background: "#d6f2e2", color: "#136b3c" }}
           onClick={() => props.onResult(true)}
         >
-          I know it
+          {t(props.lang, "iKnowIt")}
         </button>
       </div>
     </motion.div>

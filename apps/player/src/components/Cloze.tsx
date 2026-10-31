@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import type { ExerciseItem, LessonPack } from "@pagebuddy/schema";
+import { normWord, type ExerciseItem, type LessonPack } from "@pagebuddy/schema";
 import { playPackClip, sfx } from "../audio";
 import { popConfetti } from "../celebrate";
+import { t } from "../strings";
 
 interface Payload {
   text: string;
@@ -22,6 +23,8 @@ export default function Cloze(props: {
   const [wrong, setWrong] = useState<string | null>(null);
   const [secondChance, setSecondChance] = useState(false);
 
+  const lang = props.pack.language ?? "en";
+  const ar = lang === "ar";
   const sentence = props.pack.sentences.find((s) => s.text === p.text);
   const clip = sentence?.audio.normal;
 
@@ -29,10 +32,14 @@ export default function Cloze(props: {
   // in context) — only when a vocab clip exists for that option
   const optClip = (o: string) =>
     props.pack.vocab.find(
-      (v) => v.word.toLowerCase() === o.toLowerCase(),
+      (v) => normWord(v.word, lang) === normWord(o, lang),
     )?.audio?.normal;
 
-  const parts = p.text.split(new RegExp(`\\b${escapeRe(p.blank)}\\b`, "i"));
+  // \b boundaries don't apply to Arabic — blank is a literal substring there
+  // (enrich keeps the exact printed form for ar, normed form for en).
+  const parts = ar
+    ? p.text.split(new RegExp(escapeRe(p.blank), "g"))
+    : p.text.split(new RegExp(`\\b${escapeRe(p.blank)}\\b`, "i"));
 
   const playSentence = () => {
     if (clip) playPackClip(props.packId, clip).catch(() => {});
@@ -57,7 +64,7 @@ export default function Cloze(props: {
 
   return (
     <div className="card exercise-card" ref={cardRef}>
-      <p className="exercise-label">Fill the gap</p>
+      <p className="exercise-label">{t(lang, "fillGap")}</p>
       <p className="cloze-text">
         {parts[0]}
         <motion.span
@@ -102,8 +109,8 @@ export default function Cloze(props: {
           );
         })}
       </div>
-      {wrong && !picked && <p className="hint">Almost — try again.</p>}
-      {picked && <p className="hint good">Nice one! ⭐</p>}
+      {wrong && !picked && <p className="hint">{t(lang, "almost")}</p>}
+      {picked && <p className="hint good">{t(lang, "niceOne")}</p>}
     </div>
   );
 }

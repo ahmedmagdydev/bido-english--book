@@ -58,6 +58,7 @@ export const ExerciseTypeSchema = z.enum([
   "trueFalse",
   "minimalPair",
   "dictation",
+  "trace",
   "comprehension",
 ]);
 export type ExerciseType = z.infer<typeof ExerciseTypeSchema>;
@@ -93,6 +94,8 @@ export const LessonPackSchema = z.object({
   packId: z.string(),
   version: z.number().int(),
   title: z.string(),
+  language: z.enum(["en", "ar"]).default("en"),
+  dir: z.enum(["ltr", "rtl"]).default("ltr"),
   lessons: z.array(LessonSchema),
   vocab: z.array(VocabItemSchema),
   sentences: z.array(SentenceItemSchema),

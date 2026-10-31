@@ -34,6 +34,7 @@ export default function SpeakPage() {
   const [micErr, setMicErr] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [packId, setPackId] = useState("");
+  const [lang, setLang] = useState("en");
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -46,6 +47,7 @@ export default function SpeakPage() {
       const pack = await loadPack().catch(() => null);
       if (!pack) return;
       setPackId(pack.packId);
+      setLang(pack.language);
       const reviews = await getReviews(pack.packId);
       const now = Date.now();
       const due = (id: string) => (reviews.get(id)?.nextDue ?? 0) <= now;
@@ -196,7 +198,7 @@ export default function SpeakPage() {
 
   const rate = async (good: boolean) => {
     if (!item) return;
-    await recordAttempt(item.id, packId, "speakCompare", good, 0);
+    await recordAttempt(item.id, packId, "speakCompare", good, 0, lang);
     if (good) {
       sfx.correct();
       popConfetti();

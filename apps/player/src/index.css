@@ -567,6 +567,28 @@ button:disabled {
   opacity: 0;
 }
 
+/* --- RTL (Arabic packs) --- */
+[dir="rtl"] body {
+  font-family:
+    "Geeza Pro",
+    "SF Arabic",
+    "Noto Naskh Arabic",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+[dir="rtl"] .sentence-chip,
+[dir="rtl"] .cloze-text,
+[dir="rtl"] .example,
+[dir="rtl"] .hint {
+  direction: rtl;
+  text-align: right;
+}
+[dir="rtl"] .exercise-label,
+[dir="rtl"] .banner-tag {
+  letter-spacing: 0; /* Arabic doesn't track like Latin caps */
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1393,4 +1415,85 @@ body {
 }
 .backspace-btn:active {
   background: #ffe2d9;
+}
+
+/* language world picker + switch chip (two "apps" in one shell) */
+.lang-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+.lang-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 14px 18px;
+  border-radius: 22px;
+  border: 3px solid transparent;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+}
+.lang-card.coral { border-color: var(--coral); box-shadow: 0 8px 0 var(--coral-d); }
+.lang-card.coral:active { box-shadow: 0 2px 0 var(--coral-d); transform: translateY(4px); }
+.lang-card.mint { border-color: var(--mint, #2e9e7a); box-shadow: 0 8px 0 #1e7a5c; }
+.lang-card.mint:active { box-shadow: 0 2px 0 #1e7a5c; transform: translateY(4px); }
+.lang-card .lang-emoji { font-size: 3rem; }
+.lang-card .lang-name { font-size: 1.6rem; font-weight: 800; }
+.lang-card .lang-sub { font-size: 0.95rem; opacity: 0.7; }
+.lang-card .lang-packs { font-size: 0.85rem; opacity: 0.6; }
+.lang-card .badge { position: absolute; top: 10px; inset-inline-end: 10px; }
+.lang-chip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  inset-inline-end: 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eef1fa;
+  border: 2px solid #d7dceb;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* trace-write exercise: guide canvas + ink canvas stacked */
+.trace-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: 8px auto;
+  border-radius: 18px;
+  background: #fffdf8;
+  border: 2px dashed #d9cfee;
+  overflow: hidden;
+}
+.trace-guide {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.trace-ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: pointer;
+}
+.trace-track {
+  height: 10px;
+  margin: 4px auto 0;
+  max-width: 640px;
+  border-radius: 999px;
+  background: #efeaf8;
+  overflow: hidden;
+}
+.trace-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4f8ef7, #6fd3a7);
 }

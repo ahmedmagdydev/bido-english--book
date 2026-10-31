@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { unlockAudio, playPackClip } from "../audio";
 import Mascot from "../components/Mascot";
 import { useApp } from "../store";
-import { streak, todayStats } from "../progress";
-import { db } from "../db";
+import { streak, todayStats, langDailies } from "../progress";
+import { t } from "../strings";
 import type { Daily, LessonPack } from "@pagebuddy/schema";
 
 const GOAL_MINUTES = 10;
@@ -26,9 +26,12 @@ export default function HomePage() {
     (async () => {
       const p = await loadPack().catch(() => null);
       setPack(p);
-      setDay(await todayStats());
-      setStreakDays(await streak());
-      const dailies = await db.daily.toArray();
+      // every stat belongs to this language's world — switching worlds
+      // swaps stars/streak/goal, just like a separate app
+      const lang = p?.language ?? "en";
+      setDay(await todayStats(lang));
+      setStreakDays(await streak(lang));
+      const dailies = await langDailies(lang);
       setTotalStars(dailies.reduce((s, d) => s + d.stars, 0));
     })();
   }, []);
@@ -36,11 +39,15 @@ export default function HomePage() {
   const petStage =
     totalStars >= 30 ? "buddy" : totalStars >= 10 ? "hatched" : "egg";
   const nextStage = PET_STAGES.find((s) => totalStars < s.at);
+  const lang = pack?.language;
 
   return (
     <div className="page no-select">
       <div className="home-top">
         <h1 style={{ marginBottom: 6 }}>PageBuddy</h1>
+        <a href="#/lang" className="lang-chip" title="switch world">
+          {lang === "ar" ? "🌐 English" : "🌐 العربية"}
+        </a>
         <div className="stat-pills">
           <span className="stat-pill">⭐ {totalStars}</span>
           <span className="stat-pill">🔥 {streakDays}</span>
@@ -74,14 +81,14 @@ export default function HomePage() {
               marginTop: 6,
             }}
           >
-            ▶ Play
+            {t(lang, "play")}
           </motion.a>
         </div>
       </div>
 
       {pack && pack.vocab.length > 0 && (
         <div className="vocab-banner">
-          <span className="banner-tag">📖 this lesson's words</span>
+          <span className="banner-tag">{t(lang, "lessonWords")}</span>
           <div className="vocab-chips">
             {pack.vocab.slice(0, 8).map((v) => (
               <button
@@ -107,28 +114,28 @@ export default function HomePage() {
       <div className="mode-grid">
         <a href="#/speak" className="mode-card mint">
           <span className="mode-icon">🎤</span>
-          <span className="mode-title">Say it!</span>
-          <span className="mode-sub">record &amp; listen</span>
+          <span className="mode-title">{t(lang, "sayIt")}</span>
+          <span className="mode-sub">{t(lang, "sayItSub")}</span>
         </a>
         <a href="#/read" className="mode-card sky">
           <span className="mode-icon">📖</span>
-          <span className="mode-title">Read</span>
-          <span className="mode-sub">the story</span>
+          <span className="mode-title">{t(lang, "read")}</span>
+          <span className="mode-sub">{t(lang, "readSub")}</span>
         </a>
         <a href="#/map" className="mode-card sun">
           <span className="mode-icon">🗺</span>
-          <span className="mode-title">Journey</span>
-          <span className="mode-sub">your path</span>
+          <span className="mode-title">{t(lang, "journey")}</span>
+          <span className="mode-sub">{t(lang, "journeySub")}</span>
         </a>
         <a href="#/rewards" className="mode-card grape">
           <span className="mode-icon">🏅</span>
-          <span className="mode-title">Stickers</span>
-          <span className="mode-sub">your prizes</span>
+          <span className="mode-title">{t(lang, "stickers")}</span>
+          <span className="mode-sub">{t(lang, "stickersSub")}</span>
         </a>
         <a href="#/boss" className="mode-card pink">
           <span className="mode-icon">🏰</span>
-          <span className="mode-title">Boss</span>
-          <span className="mode-sub">tricky words</span>
+          <span className="mode-title">{t(lang, "boss")}</span>
+          <span className="mode-sub">{t(lang, "bossSub")}</span>
         </a>
       </div>
 
@@ -140,9 +147,9 @@ export default function HomePage() {
         </div>
         <div className="pet-body">
           <h3>
-            {petStage === "egg" && "Your buddy is coming!"}
-            {petStage === "hatched" && "Buddy hatched!"}
-            {petStage === "buddy" && "Buddy the fox!"}
+            {petStage === "egg" && t(lang, "petComing")}
+            {petStage === "hatched" && t(lang, "petHatched")}
+            {petStage === "buddy" && t(lang, "petBuddy")}
           </h3>
           <div className="pet-track">
             <div

@@ -1,8 +1,19 @@
-import { LessonPackSchema, type LessonPack } from "@pagebuddy/schema";
+import {
+  LessonPackSchema,
+  type LessonPack,
+  type PackLang,
+} from "@pagebuddy/schema";
 import { db } from "./db";
 
 const cache = new Map<string, LessonPack>();
 let activePackId: string | null = null;
+
+export interface PackMeta {
+  id: string;
+  title: string;
+  language: PackLang;
+  dir: "ltr" | "rtl";
+}
 
 export async function listPacks(): Promise<string[]> {
   try {
@@ -14,6 +25,43 @@ export async function listPacks(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+// Pack index metadata — lets the language gate/world picker work without
+// fetching every pack.json. Older index.json files lack `meta` → assume en.
+export async function listPackMeta(): Promise<PackMeta[]> {
+  try {
+    const res = await fetch("packs/index.json");
+    const idx = (await res.json()) as {
+      packs: string[];
+      meta?: PackMeta[];
+    };
+    if (idx.meta?.length) return idx.meta;
+    return idx.packs.map((id) => ({
+      id,
+      title: id,
+      language: "en" as PackLang,
+      dir: "ltr" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// The "world" the kid is in — drives which packs/stats/chrome are shown.
+export async function getActiveLang(): Promise<PackLang | null> {
+  const s = await db.settings.get("activeLang");
+  return (s?.value as PackLang) ?? null;
+}
+
+export async function setActiveLang(lang: PackLang): Promise<void> {
+  await db.settings.put({ key: "activeLang", value: lang });
+  // jump to that world's most recent pack if we have one, else its first
+  const metas = await listPackMeta();
+  const first = metas.find((m) => m.language === lang);
+  const cur = await db.settings.get("activePack");
+  const curInLang = metas.find((m) => m.id === cur?.value && m.language === lang);
+  if (first && !curInLang) await setActivePack(first.id);
 }
 
 export async function loadPack(packId: string): Promise<LessonPack> {

@@ -16,6 +16,8 @@ export type Review = z.infer<typeof ReviewSchema>;
 export const AttemptSchema = z.object({
   id: z.string().optional(),
   itemId: z.string(),
+  packId: z.string().default(""),
+  lang: z.string().default("en"),
   exerciseType: z.string(),
   correct: z.boolean(),
   ms: z.number(),
@@ -25,6 +27,7 @@ export type Attempt = z.infer<typeof AttemptSchema>;
 
 export const DailySchema = z.object({
   date: z.string(), // YYYY-MM-DD local
+  lang: z.string().default("en"), // stats are per-language "world"
   minutes: z.number(),
   itemsPracticed: z.number().int(),
   accuracy: z.number(),

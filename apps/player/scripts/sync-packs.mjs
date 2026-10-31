@@ -1,6 +1,6 @@
 // Copies built lesson packs (content/packs/*) into public/packs/ so vite can
 // serve them, and writes packs/index.json. Run after `pipeline pack`.
-import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +15,7 @@ if (!existsSync(src)) {
 mkdirSync(dst, { recursive: true });
 
 const packs = [];
+const meta = [];
 for (const entry of readdirSync(src, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue;
   const packJson = join(src, entry.name, "pack.json");
@@ -22,6 +23,16 @@ for (const entry of readdirSync(src, { withFileTypes: true })) {
   rmSync(join(dst, entry.name), { recursive: true, force: true });
   cpSync(join(src, entry.name), join(dst, entry.name), { recursive: true });
   packs.push(entry.name);
+  const p = JSON.parse(readFileSync(packJson, "utf8"));
+  meta.push({
+    id: entry.name,
+    title: p.title ?? entry.name,
+    language: p.language ?? "en",
+    dir: p.dir ?? "ltr",
+  });
 }
-writeFileSync(join(dst, "index.json"), JSON.stringify({ packs }, null, 2));
+writeFileSync(
+  join(dst, "index.json"),
+  JSON.stringify({ packs, meta }, null, 2),
+);
 console.log(`synced ${packs.length} pack(s) → public/packs: ${packs.join(", ")}`);

@@ -1,10 +1,16 @@
-import type {
-  ExerciseItem,
-  ExerciseType,
-  LessonPack,
-  Review,
-  VocabItem,
+import {
+  DISTRACTOR_LETTERS,
+  lettersOf,
+  normWord,
+  type ExerciseItem,
+  type ExerciseType,
+  type LessonPack,
+  type PackLang,
+  type Review,
+  type VocabItem,
 } from "@pagebuddy/schema";
+
+const langOf = (pack: LessonPack): PackLang => pack.language ?? "en";
 
 export type SessionStep =
   | { kind: "flashcard"; vocab: VocabItem }
@@ -20,6 +26,7 @@ function preferredTypes(box: number): ExerciseType[] {
       "listenPick",
       "matchPairs",
       "trueFalse",
+      "trace",
       "oddOneOut",
       "cloze",
       "spellingTiles",
@@ -53,7 +60,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-const norm = (w: string) => w.toLowerCase().replace(/[^a-z']/g, "");
+const norm = (w: string, lang: PackLang = "en") => normWord(w, lang);
 
 function otherWords(v: VocabItem, pack: LessonPack, n: number): string[] {
   return shuffle(pack.vocab.filter((x) => x.id !== v.id))
@@ -88,17 +95,30 @@ function synthListenPick(v: VocabItem, pack: LessonPack): ExerciseItem {
   };
 }
 
-function synthTiles(v: VocabItem, dictation: boolean): ExerciseItem {
-  const letters = norm(v.word).replace(/'/g, "").split("");
-  const extras = "etaoinshrdlu"
+function synthTiles(v: VocabItem, dictation: boolean, pack: LessonPack): ExerciseItem {
+  const lang = langOf(pack);
+  const letters = lettersOf(v.word, lang);
+  const wn = norm(v.word, lang);
+  const extras = DISTRACTOR_LETTERS[lang]
     .split("")
-    .filter((l) => !letters.includes(l))
+    .filter((l) => !letters.includes(l) && !wn.includes(l))
     .slice(0, 3);
   return {
     id: `synth_${dictation ? "dict" : "spell"}_${v.id}`,
     type: dictation ? "dictation" : "spellingTiles",
     refs: [v.id],
     payload: { word: v.word, tiles: shuffle([...letters, ...extras]) },
+    approved: true,
+  };
+}
+
+// Finger-tracing a dotted guide — writing practice, no wrong answers.
+function synthTrace(v: VocabItem): ExerciseItem {
+  return {
+    id: `synth_trace_${v.id}`,
+    type: "trace",
+    refs: [v.id],
+    payload: { word: v.word },
     approved: true,
   };
 }
@@ -131,12 +151,14 @@ function synthOddOneOut(v: VocabItem, pack: LessonPack): ExerciseItem | null {
 }
 
 // Close-sounding pairs from the vocab list (bolt/bolted, pan/panned…).
+// English-suffix heuristic — rarely fires for Arabic and safely returns null.
 function minimalPartner(v: VocabItem, pack: LessonPack): VocabItem | null {
-  const w = norm(v.word);
+  const lang = langOf(pack);
+  const w = norm(v.word, lang);
   return (
     pack.vocab.find((x) => {
       if (x.id === v.id) return false;
-      const o = norm(x.word);
+      const o = norm(x.word, lang);
       return (
         (w.startsWith(o) && w.length - o.length <= 3) ||
         (o.startsWith(w) && o.length - w.length <= 3)
@@ -183,8 +205,9 @@ const synths: Partial<Record<ExerciseType, Synth>> = {
   oddOneOut: (v, p) => synthOddOneOut(v, p),
   minimalPair: (v, p) => synthMinimalPair(v, p),
   matchPairs: (v, p) => synthMatchPairs(v, p),
-  dictation: (v) => synthTiles(v, true),
-  spellingTiles: (v) => synthTiles(v, false),
+  dictation: (v, p) => synthTiles(v, true, p),
+  spellingTiles: (v, p) => synthTiles(v, false, p),
+  trace: (v) => synthTrace(v),
 };
 
 function pickExercise(
@@ -285,9 +308,12 @@ export function buildSession(
   }
   for (const e of bonus) {
     used.add(e.id);
-    const anchor = items.find((v) =>
-      JSON.stringify(e.payload).toLowerCase().includes(norm(v.word)),
-    );
+    const anchor = items.find((v) => {
+      const w = norm(v.word, langOf(pack));
+      return (
+        w && norm(JSON.stringify(e.payload), langOf(pack)).includes(w)
+      );
+    });
     steps.push({
       kind: "exercise",
       exercise: e,
@@ -355,7 +381,7 @@ export function buildBossSession(
 
   // second wave: the three weakest items get a harder re-ask
   for (const v of items.slice(0, 3)) {
-    const ex = synthTiles(v, true);
+    const ex = synthTiles(v, true, pack);
     used.add(ex.id);
     steps.push({ kind: "exercise", exercise: ex, itemId: v.id });
   }

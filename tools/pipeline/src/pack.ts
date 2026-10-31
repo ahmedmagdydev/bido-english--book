@@ -6,6 +6,7 @@ import {
   ExerciseItemSchema,
   LessonPackSchema,
   ReviewedPageSchema,
+  detectLang,
   type ExerciseItem,
   type LessonPack,
   type SentenceItem,
@@ -13,8 +14,17 @@ import {
 } from "@pagebuddy/schema";
 import { packDir, photosDir, workDir } from "./paths.js";
 
-const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+// Stable id fragment for vocab words. Non-Latin words (Arabic etc.) fall
+// back to a content hash — an empty slug would collapse every Arabic vocab
+// item into one id.
+const slug = (s: string) => {
+  const latin = s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (latin) return latin;
+  return "u" + createHash("sha1").update(s).digest("hex").slice(0, 10);
+};
 
 // free-text pos from extraction → pack enum
 function toPos(p: string | null): VocabItem["pos"] {
@@ -42,6 +52,7 @@ export interface PackOptions {
   packId: string;
   title: string;
   version: number;
+  language?: "en" | "ar"; // default: auto-detected from pack content
 }
 
 // Assembles approved work-dir content into a validated LessonPack (plan §6.1
@@ -193,10 +204,15 @@ export async function buildPack(opts: PackOptions): Promise<void> {
     }
   }
 
+  const language =
+    opts.language ??
+    detectLang([...vocab.map((v) => v.word), ...sentences.map((s) => s.text)]);
   const pack: LessonPack = {
     packId: opts.packId,
     version: opts.version,
     title: opts.title,
+    language,
+    dir: language === "ar" ? "rtl" : "ltr",
     lessons: [
       {
         id: `${opts.packId}-all`,

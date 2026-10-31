@@ -9,20 +9,28 @@ import { workDir } from "./paths.js";
 const run = promisify(execFile);
 
 // Cache key = hash(text + voice + speed) — re-runs only generate what changed
-// (plan §6.1 stage 5). Provider: local Piper TTS (free, MIT-licensed voices,
-// redistribution-friendly). Needs PIPER_BIN + PIPER_VOICE in env, e.g.:
-//   PIPER_BIN=D:\tools\piper\piper.exe
-//   PIPER_VOICE=D:\tools\piper\en_US-lessac-medium.onnx
+// (plan §6.1 stage 5). Providers:
+//   piper   — local Piper TTS (PIPER_BIN + PIPER_VOICE), free voices, wav
+//   edgetts — Edge neural voices via `edge-tts` CLI (EDGE_TTS_BIN, default
+//             "edge-tts"; EDGE_VOICE default ar-SA-ZariyahNeural), mp3 out.
+//             Needs internet at build time only. Select via TTS_PROVIDER env
+//             or `pipeline tts <section> --provider edgetts`.
 
 export const SPEEDS = ["normal", "slow"] as const;
 export type Speed = (typeof SPEEDS)[number];
+type Provider = "piper" | "edgetts";
 
-export function audioFileName(text: string, voice: string, speed: Speed) {
+export function audioFileName(
+  text: string,
+  voice: string,
+  speed: Speed,
+  ext = "wav",
+) {
   const h = createHash("sha1")
     .update(`${text}|${voice}|${speed}`)
     .digest("hex")
     .slice(0, 16);
-  return `${h}.wav`;
+  return `${h}.${ext}`;
 }
 
 async function exists(p: string) {
@@ -39,7 +47,25 @@ async function synthesize(
   voice: string,
   speed: Speed,
   outPath: string,
+  provider: Provider,
 ): Promise<void> {
+  if (provider === "edgetts") {
+    const bin = process.env.EDGE_TTS_BIN ?? "edge-tts";
+    await run(
+      bin,
+      [
+        "--voice",
+        voice,
+        "--text",
+        text,
+        "--write-media",
+        outPath,
+        ...(speed === "slow" ? ["--rate=-25%"] : []),
+      ],
+      { maxBuffer: 4 * 1024 * 1024 },
+    );
+    return;
+  }
   const piper = process.env.PIPER_BIN;
   if (!piper) throw new Error("PIPER_BIN not set (path to piper executable)");
   // Piper's --length-scale >1 slows speech; used for the "slow" clip.
@@ -62,7 +88,11 @@ interface TtsItem {
 }
 
 export async function ttsSection(section: string): Promise<void> {
-  const voice = process.env.PIPER_VOICE;
+  const provider = (process.env.TTS_PROVIDER ?? "piper") as Provider;
+  const voice =
+    provider === "edgetts"
+      ? (process.env.EDGE_VOICE ?? "ar-SA-ZariyahNeural")
+      : process.env.PIPER_VOICE;
   if (!voice) {
     console.log(
       "PIPER_VOICE not set. Set PIPER_BIN + PIPER_VOICE to a Piper voice model\n" +
@@ -70,9 +100,15 @@ export async function ttsSection(section: string): Promise<void> {
     );
     return;
   }
-  const piper = process.env.PIPER_BIN;
-  if (!piper) throw new Error("PIPER_BIN not set (path to piper executable)");
-  await run(piper, ["--help"]); // sanity-check the binary once up front
+  const ext = provider === "edgetts" ? "mp3" : "wav";
+  if (provider === "edgetts") {
+    const bin = process.env.EDGE_TTS_BIN ?? "edge-tts";
+    await run(bin, ["--version"]); // sanity-check once up front
+  } else {
+    const piper = process.env.PIPER_BIN;
+    if (!piper) throw new Error("PIPER_BIN not set (path to piper executable)");
+    await run(piper, ["--help"]); // sanity-check the binary once up front
+  }
 
   const dir = workDir(section);
   const audioDir = join(dir, "audio");
@@ -93,10 +129,12 @@ export async function ttsSection(section: string): Promise<void> {
       items.push({ key: `sent:${s.text}`, text: s.text });
   }
 
-  // comprehension questions + options (LLM stage output, plan §6.5)
-  const compPath = join(dir, "enriched.comprehension.json");
-  if (await exists(compPath)) {
-    const comps = JSON.parse(await readFile(compPath, "utf8")) as {
+  // comprehension questions + options — every enriched.*.json file
+  // (comprehension LLM pass §6.5, bookex book-exercise pass)
+  for (const ef of (await readdir(dir)).filter(
+    (f) => f.startsWith("enriched.") && f.endsWith(".json"),
+  )) {
+    const comps = JSON.parse(await readFile(join(dir, ef), "utf8")) as {
       payload?: { question?: string; options?: string[] };
     }[];
     for (const c of comps) {
@@ -112,16 +150,28 @@ export async function ttsSection(section: string): Promise<void> {
   let cached = 0;
   for (const item of items) {
     for (const speed of SPEEDS) {
-      const name = audioFileName(item.text, voice, speed);
+      const name = audioFileName(item.text, voice, speed, ext);
       const out = join(audioDir, name);
-      manifest[item.key] = manifest[item.key] ?? { normal: "" };
-      manifest[item.key][speed] = `audio/${name}`;
       if (await exists(out)) {
+        manifest[item.key] = manifest[item.key] ?? { normal: "" };
+        manifest[item.key][speed] = `audio/${name}`;
         cached++;
         continue;
       }
       process.stdout.write(`tts [${speed}] "${item.text.slice(0, 40)}" … `);
-      await synthesize(item.text, voice, speed, out);
+      try {
+        await synthesize(item.text, voice, speed, out, provider);
+      } catch {
+        // transient provider failure (edge-tts NoAudioReceived etc.) — one retry
+        try {
+          await synthesize(item.text, voice, speed, out, provider);
+        } catch {
+          console.log("FAILED — skipped (no manifest entry)");
+          continue;
+        }
+      }
+      manifest[item.key] = manifest[item.key] ?? { normal: "" };
+      manifest[item.key][speed] = `audio/${name}`;
       console.log("ok");
       made++;
     }

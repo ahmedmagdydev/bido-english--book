@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { db } from "../db";
-import { streak } from "../progress";
+import { streak, langDailies } from "../progress";
+import { useApp } from "../store";
 import type { Attempt } from "@pagebuddy/schema";
 
 interface Sticker {
@@ -18,11 +19,14 @@ export default function RewardsPage() {
 
   useEffect(() => {
     (async () => {
+      // stickers are per-world — Arabic wins don't unlock English ones
+      const pack = await useApp.getState().loadPack().catch(() => null);
+      const lang = pack?.language ?? "en";
       const [dailies, attempts, streakDays, bossRow] = await Promise.all([
-        db.daily.toArray(),
-        db.attempts.toArray() as Promise<Attempt[]>,
-        streak(),
-        db.settings.get("bossClears"),
+        langDailies(lang),
+        db.attempts.filter((a) => a.lang === lang).toArray() as Promise<Attempt[]>,
+        streak(lang),
+        db.settings.get(`bossClears:${lang}`),
       ]);
       const stars = dailies.reduce((s, d) => s + d.stars, 0);
       const items = dailies.reduce((s, d) => s + d.itemsPracticed, 0);

@@ -8,6 +8,7 @@ dev-dist/
 # Copyrighted book content — never commit (plan §10, §12)
 content/
 pyhsical-book/*.pdf
+arabic-book/*.pdf
 # synced pack copies are regenerated from content/ via `pnpm sync-packs`
 apps/player/public/packs/
 
@@ -18,3 +19,6 @@ tools/tts/
 Thumbs.db
 .DS_Store
 !.env.example
+.tmp-ar/
+work_tmp/
+*.log

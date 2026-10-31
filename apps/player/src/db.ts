@@ -29,3 +29,34 @@ db.version(1).stores({
   settings: "key",
   spike: "id",
 });
+
+// v2: two "worlds" (en/ar) share the DB without sharing progress.
+// - review PK → [packId+itemId]: sentence ids like "s_001" repeat across
+//   packs and must not share Leitner state.
+// - attempts gain packId+lang so stats/labels stay attributable.
+// - daily PK → [date+lang]: stars/minutes/streak are per-language.
+db.version(2)
+  .stores({
+    packs: "packId",
+    review: "[packId+itemId], packId, nextDue",
+    attempts: "++id, itemId, ts, packId",
+    daily: "[date+lang], date",
+    settings: "key",
+    spike: "id",
+  })
+  .upgrade(async (tx) => {
+    // all pre-v2 data was English — default the new fields to en
+    await tx
+      .table("attempts")
+      .toCollection()
+      .modify((a) => {
+        a.packId ??= "";
+        a.lang ??= "en";
+      });
+    await tx
+      .table("daily")
+      .toCollection()
+      .modify((d) => {
+        d.lang ??= "en";
+      });
+  });

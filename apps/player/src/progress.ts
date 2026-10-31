@@ -23,12 +23,15 @@ export async function recordAttempt(
   exerciseType: string,
   correct: boolean,
   ms: number,
+  lang = "en",
 ): Promise<void> {
   const review =
-    (await db.review.get(itemId)) ?? newReview(itemId, packId);
+    (await db.review.get([packId, itemId])) ?? newReview(itemId, packId);
   await db.review.put(updateReview(review, correct));
   const attempt: Attempt = {
     itemId,
+    packId,
+    lang,
     exerciseType,
     correct,
     ms,
@@ -47,15 +50,18 @@ export async function finishSession(stats: {
   correct: number;
   stars: number;
   minutes: number;
+  lang?: string;
 }): Promise<void> {
   const key = todayKey();
-  const prev = (await db.daily.get(key)) as Daily | undefined;
+  const lang = stats.lang ?? "en";
+  const prev = (await db.daily.get([key, lang])) as Daily | undefined;
   const itemsPracticed = (prev?.itemsPracticed ?? 0) + stats.itemsPracticed;
   const totalCorrect =
     Math.round((prev?.accuracy ?? 0) * (prev?.itemsPracticed ?? 0)) +
     stats.correct;
   await db.daily.put({
     date: key,
+    lang,
     minutes: (prev?.minutes ?? 0) + stats.minutes,
     itemsPracticed,
     accuracy: itemsPracticed ? totalCorrect / itemsPracticed : 0,
@@ -63,16 +69,21 @@ export async function finishSession(stats: {
   });
 }
 
-export async function todayStats(): Promise<Daily | null> {
-  return (await db.daily.get(todayKey())) ?? null;
+export async function todayStats(lang = "en"): Promise<Daily | null> {
+  return (await db.daily.get([todayKey(), lang])) ?? null;
+}
+
+// All daily rows for one language world (stars/items totals).
+export async function langDailies(lang = "en"): Promise<Daily[]> {
+  return db.daily.filter((d) => d.lang === lang).toArray();
 }
 
 // Streak with one "freeze" (plan §7.4): a single missed day doesn't break
 // the chain — the freeze is consumed and the walk continues.
-export async function streak(): Promise<number> {
+export async function streak(lang = "en"): Promise<number> {
   const rows = await db.daily.orderBy("date").reverse().toArray();
-  if (!rows.length) return 0;
-  const days = new Set(rows.map((r) => r.date));
+  const days = new Set(rows.filter((r) => r.lang === lang).map((r) => r.date));
+  if (!days.size) return 0;
   let count = 0;
   let freezes = 1;
   const cursor = new Date();

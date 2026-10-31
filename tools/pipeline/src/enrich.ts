@@ -2,7 +2,13 @@ import { readFile, writeFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   ReviewedPageSchema,
+  detectLang,
+  DISTRACTOR_LETTERS,
+  lettersOf,
+  normWord,
+  wordList,
   type ExerciseItem,
+  type PackLang,
   type PageExtract,
 } from "@pagebuddy/schema";
 import { workDir } from "./paths.js";
@@ -10,8 +16,7 @@ import { workDir } from "./paths.js";
 // Deterministic exercise generation from approved page extracts (plan §6.5).
 // Output lands in work/<section>/enriched.exercises.json with approved:false —
 // the parent must approve everything before it reaches a pack.
-
-const WORD_RE = /[A-Za-z']+/g;
+// Language (en/ar) is detected from the extracted text — no flag needed.
 
 interface VocabLite {
   word: string;
@@ -42,28 +47,32 @@ async function loadApproved(section: string) {
   return { vocab, sentences, pageCount: files.length };
 }
 
-const norm = (w: string) => w.toLowerCase().replace(/[^a-z']/g, "");
+const norm = (w: string, lang: PackLang = "en") => normWord(w, lang);
 
+// Dedupes by normalized form but returns DISPLAY words (keeps tashkeel for
+// Arabic options instead of bare stripped forms).
 function pickDistractors(
   target: string,
   pool: string[],
   count: number,
+  lang: PackLang = "en",
 ): string[] {
-  const t = norm(target);
-  const candidates = pool
-    .map(norm)
-    .filter((w) => w && w !== t)
-    .filter((w, i, a) => a.indexOf(w) === i);
+  const t = norm(target, lang);
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const w of pool) {
+    const n = norm(w, lang);
+    if (!n || n === t || seen.has(n)) continue;
+    seen.add(n);
+    candidates.push(w);
+  }
   // prefer similar-length words, then shuffle deterministically-ish
   candidates.sort(
-    (a, b) => Math.abs(a.length - t.length) - Math.abs(b.length - t.length),
+    (a, b) =>
+      Math.abs(norm(a, lang).length - t.length) -
+      Math.abs(norm(b, lang).length - t.length),
   );
-  const picked: string[] = [];
-  for (const c of candidates) {
-    if (picked.length >= count) break;
-    picked.push(c);
-  }
-  return picked;
+  return candidates.slice(0, count);
 }
 
 function shuffled<T>(arr: T[], seed: number): T[] {
@@ -84,6 +93,10 @@ export async function enrichSection(section: string): Promise<void> {
     return;
   }
 
+  const lang = detectLang([
+    ...vocab.map((v) => v.word),
+    ...sentences.map((s) => s.text),
+  ]);
   const vocabWords = vocab.map((v) => v.word);
   const out: ExerciseItem[] = [];
   let n = 0;
@@ -91,7 +104,7 @@ export async function enrichSection(section: string): Promise<void> {
 
   // listenPick: hear word → pick correct option (§6.5)
   for (const v of vocab) {
-    const distractors = pickDistractors(v.word, vocabWords, 3);
+    const distractors = pickDistractors(v.word, vocabWords, 3, lang);
     if (distractors.length < 2) continue;
     out.push({
       id: id("listenpick"),
@@ -107,13 +120,16 @@ export async function enrichSection(section: string): Promise<void> {
     });
   }
 
-  // spellingTiles: letters + distractor letters (§6.5)
+  // spellingTiles: grapheme tiles + distractor letters (§6.5). Arabic tiles
+  // keep letter+harakat together; distractors are bare Arabic letters whose
+  // normalized form isn't already in the word.
   for (const v of vocab) {
-    const letters = norm(v.word).split("");
+    const letters = lettersOf(v.word, lang);
     if (letters.length < 2 || letters.length > 12) continue;
-    const extras = "etaoinshrdlu"
+    const wn = norm(v.word, lang);
+    const extras = DISTRACTOR_LETTERS[lang]
       .split("")
-      .filter((l) => !letters.includes(l))
+      .filter((l) => !letters.includes(l) && !wn.includes(l))
       .slice(0, 3);
     out.push({
       id: id("spell"),
@@ -130,15 +146,18 @@ export async function enrichSection(section: string): Promise<void> {
 
   // cloze + sentenceBuilder from book sentences (§6.5)
   for (const s of sentences) {
-    const words = s.text.match(WORD_RE) ?? [];
+    const words = wordList(s.text, lang);
     if (words.length >= 3) {
+      // keep display forms (tashkeel intact for ar); pick the longest
+      // normalized candidate — Arabic words run shorter so the bar drops.
       const candidates = words
         .slice(1)
-        .filter((w) => w.length >= 4)
-        .map(norm);
-      const blank = candidates.sort((a, b) => b.length - a.length)[0];
+        .filter((w) => norm(w, lang).length >= (lang === "ar" ? 3 : 4));
+      const blank = candidates.sort(
+        (a, b) => norm(b, lang).length - norm(a, lang).length,
+      )[0];
       if (blank) {
-        const distractors = pickDistractors(blank, vocabWords, 2);
+        const distractors = pickDistractors(blank, vocabWords, 2, lang);
         if (distractors.length >= 2) {
           out.push({
             id: id("cloze"),

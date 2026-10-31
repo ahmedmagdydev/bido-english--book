@@ -21,11 +21,15 @@ export default function MapPage() {
 
   useEffect(() => {
     (async () => {
+      // only this world's packs appear on the journey map
+      const active = await useApp.getState().loadPack().catch(() => null);
+      const lang = active?.language ?? "en";
       const ids = await listPacks();
       const out: Node[] = [];
       for (const id of ids) {
         try {
           const p = await loadPack(id);
+          if (p.language !== lang) continue;
           const reviews = await getReviews(id);
           const mastered = p.vocab.filter(
             (v) => (reviews.get(v.id)?.box ?? 0) >= 4,

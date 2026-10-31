@@ -17,6 +17,7 @@ import MatchPairs from "../components/MatchPairs";
 import TrueFalse from "../components/TrueFalse";
 import OddOneOut from "../components/OddOneOut";
 import MinimalPair from "../components/MinimalPair";
+import TraceWrite from "../components/TraceWrite";
 import Comprehension from "../components/Comprehension";
 import EndScreen from "../components/EndScreen";
 import { db } from "../db";
@@ -39,6 +40,7 @@ const EXERCISE_COMPONENTS: Partial<Record<ExerciseType, ComponentType<ExProps>>>
   trueFalse: TrueFalse,
   oddOneOut: OddOneOut,
   minimalPair: MinimalPair,
+  trace: TraceWrite,
   comprehension: Comprehension,
 };
 
@@ -101,12 +103,14 @@ export default function SessionPage({ boss = false }: { boss?: boolean }) {
         1,
         Math.round((Date.now() - sessionStart.current) / 60000),
       ),
+      lang: pack.language,
     });
-    setFinalStreak(await streak());
+    setFinalStreak(await streak(pack.language));
     if (boss) {
-      const row = await db.settings.get("bossClears");
+      const key = `bossClears:${pack.language}`;
+      const row = await db.settings.get(key);
       await db.settings.put({
-        key: "bossClears",
+        key,
         value: (Number(row?.value) || 0) + 1,
       });
     }
@@ -122,7 +126,7 @@ export default function SessionPage({ boss = false }: { boss?: boolean }) {
     secondChance: boolean,
   ) => {
     const ms = Date.now() - stepStart.current;
-    recordAttempt(itemId, pack.packId, type, correct, ms);
+    recordAttempt(itemId, pack.packId, type, correct, ms, pack.language);
     const pts = correct ? (secondChance ? 0.5 : 1) : 0;
     setScore((s) => ({ earned: s.earned + pts, answered: s.answered + 1 }));
     if (!correct && !requeued.current.has(itemId)) {
@@ -143,6 +147,7 @@ export default function SessionPage({ boss = false }: { boss?: boolean }) {
           correct={Math.round(score.earned)}
           total={score.answered}
           streak={finalStreak}
+          lang={pack.language}
           onAgain={() => window.location.reload()}
         />
       </div>
@@ -186,8 +191,9 @@ export default function SessionPage({ boss = false }: { boss?: boolean }) {
           key={`f-${step.vocab.id}`}
           packId={pack.packId}
           vocab={step.vocab}
+          lang={pack.language}
           onResult={(knew) => {
-            recordAttempt(step.vocab.id, pack.packId, "flashcard", knew, Date.now() - stepStart.current);
+            recordAttempt(step.vocab.id, pack.packId, "flashcard", knew, Date.now() - stepStart.current, pack.language);
             setScore((s) => ({ earned: s.earned + (knew ? 1 : 0), answered: s.answered + 1 }));
             advance();
           }}

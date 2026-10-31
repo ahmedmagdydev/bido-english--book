@@ -4,9 +4,11 @@ import { ProgressExportSchema, type Attempt } from "@pagebuddy/schema";
 import { db } from "../db";
 import { useApp } from "../store";
 import { streak } from "../progress";
+import { listPackMeta } from "../pack";
 import { sfx } from "../audio";
 
 interface Stats {
+  lang: string;
   week: { date: string; minutes: number }[];
   totalMinutes: number;
   totalStars: number;
@@ -86,15 +88,24 @@ export default function ParentPage() {
   useEffect(() => {
     if (!unlocked) return;
     (async () => {
-      const [dailies, reviews, attempts, pack, persistedRow] = await Promise.all(
-        [
-          db.daily.orderBy("date").toArray(),
-          db.review.toArray(),
-          db.attempts.toArray(),
-          loadPack().catch(() => null),
-          db.settings.get("storagePersisted"),
-        ],
+      // dashboard shows ONE world's progress (the active pack's language)
+      const pack = await loadPack().catch(() => null);
+      const lang = pack?.language ?? "en";
+      const metas = await listPackMeta().catch(() => []);
+      const langPackIds = new Set(
+        metas.filter((m) => m.language === lang).map((m) => m.id),
       );
+      const [dailies, reviews, attempts, persistedRow] = await Promise.all([
+        db.daily
+          .orderBy("date")
+          .filter((d) => d.lang === lang)
+          .toArray(),
+        db.review
+          .filter((r) => !langPackIds.size || langPackIds.has(r.packId))
+          .toArray(),
+        db.attempts.filter((a) => a.lang === lang).toArray(),
+        db.settings.get("storagePersisted"),
+      ]);
 
       // last 7 days minutes
       const byDate = new Map(dailies.map((d) => [d.date, d]));
@@ -152,6 +163,7 @@ export default function ParentPage() {
         .filter((x) => x.question);
 
       setStats({
+        lang,
         week,
         totalMinutes: dailies.reduce((s, d) => s + d.minutes, 0),
         totalStars: dailies.reduce((s, d) => s + d.stars, 0),
@@ -159,7 +171,7 @@ export default function ParentPage() {
           ? (attempts as Attempt[]).filter((a) => a.correct).length /
             attempts.length
           : null,
-        streakDays: await streak(),
+        streakDays: await streak(lang),
         wordsReviewed: reviews.length,
         hardest,
         prompts,
@@ -236,6 +248,10 @@ export default function ParentPage() {
           ← home
         </a>
       </div>
+      <p style={{ fontSize: "0.85rem", opacity: 0.65, marginTop: -6 }}>
+        {stats?.lang === "ar" ? "Arabic world" : "English world"} — switch
+        worlds on Home to see the other side.
+      </p>
 
       {!stats ? (
         <div className="card">loading…</div>

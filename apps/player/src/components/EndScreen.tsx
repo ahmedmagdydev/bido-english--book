@@ -3,12 +3,14 @@ import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import Mascot from "./Mascot";
 import { sfx } from "../audio";
+import { t } from "../strings";
 
 export default function EndScreen(props: {
   stars: number;
   correct: number;
   total: number;
   streak: number;
+  lang?: string;
   onAgain: () => void;
 }) {
   useEffect(() => {
@@ -65,15 +67,15 @@ export default function EndScreen(props: {
           transition={{ delay: 1.5, type: "spring", stiffness: 300, damping: 14 }}
         />
       )}
-      <h2>Great job!</h2>
+      <h2>{t(props.lang, "greatJob")}</h2>
       <p>
         {props.correct} of {props.total} right
-        {props.streak > 1 && ` · 🔥 ${props.streak}-day streak`}
+        {props.streak > 1 && ` · 🔥 ${props.streak} ${t(props.lang, "dayStreak")}`}
       </p>
       <div className="row" style={{ justifyContent: "center" }}>
-        <button onClick={props.onAgain}>Play again</button>
+        <button onClick={props.onAgain}>{t(props.lang, "playAgain")}</button>
         <a className="btn-link" href="#/">
-          Home
+          {t(props.lang, "home")}
         </a>
       </div>
     </div>
