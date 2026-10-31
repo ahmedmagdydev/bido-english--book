@@ -47,6 +47,18 @@ export default defineConfig({
         navigateFallback: "index.html",
         runtimeCaching: [
           {
+            // pack manifests (index.json, pack.json) must stay fresh —
+            // CacheFirst here hid a newly-synced pack for 90 days.
+            urlPattern: /\/packs\/[^/]+\/pack\.json|\/packs\/index\.json/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pack-manifests",
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // binaries (audio/images) are content-addressed — CacheFirst
             urlPattern: /\/packs\/.*/,
             handler: "CacheFirst",
             options: {
@@ -58,7 +70,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
     }),
   ],
